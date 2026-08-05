@@ -1,25 +1,14 @@
 const catchAsync = require('../../../core/catchAsync');
 const bannerService = require('./banner.service');
-const { sendSuccess } = require('../../../core/response');
-const AppError = require('../../../core/AppError');
+const { sendSuccess, sendPaginated } = require('../../../core/response');
 
-exports.getAllBanners = catchAsync(async (req, res) => {
-  const options = {
-    page: parseInt(req.query.page) || 1,
-    limit: parseInt(req.query.limit) || 10,
-    sort: { createdAt: -1 }
-  };
-  
-  const banners = await bannerService.getActiveBanners(options);
-  sendSuccess(res, banners, 'Banners retrieved successfully');
+const list = catchAsync(async (req, res) => {
+  const result = await bannerService.getActiveBanners(req.query);
+  sendPaginated(res, result.data, result.pagination, 'Banners retrieved successfully');
 });
 
-exports.getBannerDetails = catchAsync(async (req, res) => {
-  const banner = await bannerService.getById(req.params.id);
-  
-  if (!banner.status || banner.isDeleted) {
-    throw new AppError('Banner not found or inactive', 404, 'NOT_FOUND');
-  }
-
-  sendSuccess(res, banner, 'Banner details retrieved successfully');
+const getOne = catchAsync(async (req, res) => {
+  sendSuccess(res, await bannerService.getActiveBannerDetails(req.params.id), 'Banner details retrieved successfully');
 });
+
+module.exports = { list, getOne };

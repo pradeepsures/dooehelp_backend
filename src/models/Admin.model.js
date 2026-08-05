@@ -18,10 +18,16 @@ const adminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
+    enum: ['admin', 'superadmin'],
     default: 'admin',
-    enum: ['superadmin', 'admin']
-
-}},{ timestamps: true });
+  },
+  profileImage: {
+    type: String,
+    default: null,
+  }
+}, {
+  timestamps: true,
+});
 
 // Hash password before saving
 adminSchema.pre('save', async function () {

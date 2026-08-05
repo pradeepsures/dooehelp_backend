@@ -4,7 +4,7 @@ const { sendSuccess } = require('../../../core/response');
 
 exports.register = catchAsync(async (req, res) => {
   const { phoneNumber, name, email, lat, long, referredBy } = req.body;
-  
+
   const userData = {
     phoneNumber,
     name,

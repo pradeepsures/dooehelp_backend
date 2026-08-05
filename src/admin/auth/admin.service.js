@@ -72,6 +72,27 @@ class AdminService extends BaseService {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
     }
   }
+
+  async updateProfile(adminId, data, file) {
+    this.logger.info({ adminId }, 'updateProfile initiated');
+    const admin = await this.repository.findById(adminId);
+    if (!admin) {
+      throw new AppError('Admin not found', 404, 'NOT_FOUND');
+    }
+
+    const updateData = { ...data };
+    
+    // Do not allow updating password or role via profile update
+    delete updateData.password;
+    delete updateData.role;
+
+    if (file) {
+      updateData.profileImage = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
+    }
+
+    const updatedAdmin = await this.repository.updateById(adminId, updateData);
+    return updatedAdmin;
+  }
 }
 
 module.exports = new AdminService();

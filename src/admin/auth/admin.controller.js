@@ -18,3 +18,8 @@ exports.refreshToken = catchAsync(async (req, res) => {
   const result = await adminService.refreshToken(refreshToken);
   sendSuccess(res, result, 'Token refreshed successfully');
 });
+
+exports.updateProfile = catchAsync(async (req, res) => {
+  const result = await adminService.updateProfile(req.user._id, req.body, req.file);
+  sendSuccess(res, result, 'Admin profile updated successfully');
+});

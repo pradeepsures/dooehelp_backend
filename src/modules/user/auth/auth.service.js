@@ -15,11 +15,11 @@ class UserAuthService extends BaseService {
   generateAuthTokens(user) {
     const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
     const refreshSecret = process.env.JWT_REFRESH_SECRET || 'supersecret_doorhelp_refresh_key';
-    
+
     // accessToken expires in 15 minutes, refreshToken expires in 7 days
     const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ _id: user._id.toString(), role: user.role }, refreshSecret, { expiresIn: '7d' });
-    
+
     return { accessToken, refreshToken };
   }
 
@@ -49,7 +49,7 @@ class UserAuthService extends BaseService {
     // 3. Generate OTP and save user
     const otp = this.generateOTP();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    
+
     userData.otp = otp;
     userData.otpExpiresAt = otpExpiresAt;
 
@@ -125,7 +125,7 @@ class UserAuthService extends BaseService {
       // Generate only a new access token
       const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
       const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '15m' });
-      
+
       return { accessToken };
     } catch (error) {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');

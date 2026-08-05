@@ -21,7 +21,8 @@ const vendorSchema = new mongoose.Schema({
   otpExpiresAt: {
     type: Date
 
-}},{ timestamps: true });
+  }
+}, { timestamps: true });
 
 vendorSchema.methods.toJSON = function () {
   const vendor = this.toObject();

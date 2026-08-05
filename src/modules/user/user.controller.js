@@ -13,7 +13,7 @@ exports.updateProfile = catchAsync(async (req, res) => {
   const userId = req.user._id;
   const { name, email, lat, long } = req.body;
   const updateData = {};
-  
+
   if (name !== undefined) updateData.name = name;
   if (email !== undefined) updateData.email = email;
   if (lat && long) updateData.location = { lat: Number(lat), long: Number(long) };
