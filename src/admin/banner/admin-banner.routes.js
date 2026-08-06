@@ -9,9 +9,9 @@ const { protect, restrictTo } = require('../../middlewares/auth.middleware');
 router.use(protect, restrictTo('admin', 'superadmin'));
 
 router.get('/', controller.list);
-router.post('/', uploadMiddleware.single('image'), validate(createBannerSchema), controller.create);
+router.post('/', uploadMiddleware.array('images', 10), validate(createBannerSchema), controller.create);
 router.get('/:id', controller.getOne);
-router.put('/:id', uploadMiddleware.single('image'), validate(updateBannerSchema), controller.update);
+router.put('/:id', uploadMiddleware.array('images', 10), validate(updateBannerSchema), controller.update);
 router.delete('/:id', controller.remove);
 
 module.exports = router;

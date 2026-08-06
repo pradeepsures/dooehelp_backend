@@ -51,12 +51,5 @@ userSchema.pre('save', function () {
   }
 });
 
-// Remove sensitive information from JSON responses
-userSchema.methods.toJSON = function () {
-  const user = this.toObject();
-  delete user.otp;
-  delete user.otpExpiresAt;
-  return user;
-};
 
 module.exports = mongoose.model('User', userSchema);

@@ -7,9 +7,13 @@ const bannerSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    image: {
-      type: String,
+    images: {
+      type: [String],
       required: true,
+      validate: [
+        function (val) { return val.length > 0; },
+        'At least one image is required'
+      ]
     },
     status: {
       type: Boolean,
@@ -25,12 +29,5 @@ const bannerSchema = new mongoose.Schema(
   }
 );
 
-// Remove sensitive or unnecessary fields from JSON responses
-bannerSchema.methods.toJSON = function () {
-  const banner = this.toObject();
-  delete banner.__v;
-  delete banner.isDeleted;
-  return banner;
-};
 
 module.exports = mongoose.model('Banner', bannerSchema);

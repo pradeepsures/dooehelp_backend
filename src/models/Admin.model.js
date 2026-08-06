@@ -42,11 +42,5 @@ adminSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Remove sensitive info
-adminSchema.methods.toJSON = function () {
-  const admin = this.toObject();
-  delete admin.password;
-  return admin;
-};
 
 module.exports = mongoose.model('Admin', adminSchema);

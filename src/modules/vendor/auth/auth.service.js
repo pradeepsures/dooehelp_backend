@@ -1,5 +1,5 @@
 const BaseService = require('../../../core/BaseService');
-const vendorRepository = require('../vendor.repository');
+const vendorRepository = require('./vendor.repository');
 const AppError = require('../../../core/AppError');
 const jwt = require('jsonwebtoken');
 
@@ -27,7 +27,7 @@ class VendorAuthService extends BaseService {
 
     let vendor = await this.repository.findByPhone(phoneNumber);
 
-    const otp = this.generateOTP();
+    const otp = "1234"; // Static OTP for testing
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     if (!vendor) {
@@ -81,8 +81,8 @@ class VendorAuthService extends BaseService {
         throw new AppError('Vendor not found', 404, 'NOT_FOUND');
       }
 
-      const { accessToken, refreshToken: newRefreshToken } = this.generateAuthTokens(vendor);
-      return { accessToken, refreshToken: newRefreshToken };
+      const { accessToken } = this.generateAuthTokens(vendor);
+      return { accessToken };
     } catch (error) {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
     }

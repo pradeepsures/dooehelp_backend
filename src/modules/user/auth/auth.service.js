@@ -1,5 +1,5 @@
 const BaseService = require('../../../core/BaseService');
-const userRepository = require('../user.repository');
+const userRepository = require('./user.repository');
 const AppError = require('../../../core/AppError');
 const jwt = require('jsonwebtoken');
 

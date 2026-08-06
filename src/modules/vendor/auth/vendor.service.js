@@ -1,4 +1,4 @@
-const BaseService = require('../../core/BaseService');
+const BaseService = require('../../../core/BaseService');
 const vendorRepository = require('./vendor.repository');
 
 class VendorService extends BaseService {

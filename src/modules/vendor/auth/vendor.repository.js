@@ -1,5 +1,5 @@
-const BaseRepository = require('../../core/BaseRepository');
-const Vendor = require('../../models/Vendor.model');
+const BaseRepository = require('../../../core/BaseRepository');
+const Vendor = require('../../../models/Vendor.model');
 
 class VendorRepository extends BaseRepository {
   constructor() {

@@ -27,9 +27,8 @@ class AdminService extends BaseService {
     }
 
     const admin = await this.create(data);
-    const { accessToken, refreshToken } = this.generateAuthTokens(admin);
 
-    return { admin, accessToken, refreshToken };
+    return { admin };
   }
 
   async login(email, password) {
@@ -66,8 +65,9 @@ class AdminService extends BaseService {
         throw new AppError('Admin not found', 404, 'NOT_FOUND');
       }
 
-      const { accessToken, refreshToken: newRefreshToken } = this.generateAuthTokens(admin);
-      return { accessToken, refreshToken: newRefreshToken };
+      const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
+      const accessToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, secret, { expiresIn: '24h' });
+      return { accessToken };
     } catch (error) {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
     }

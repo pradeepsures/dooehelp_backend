@@ -12,11 +12,11 @@ const getOne = catchAsync(async (req, res) => {
 });
 
 const create = catchAsync(async (req, res) => {
-  sendCreated(res, await adminBannerService.createBanner(req.body, req.file), 'Banner created successfully');
+  sendCreated(res, await adminBannerService.createBanner(req.body, req.files), 'Banner created successfully');
 });
 
 const update = catchAsync(async (req, res) => {
-  sendSuccess(res, await adminBannerService.updateBanner(req.params.id, req.body, req.file), 'Banner updated successfully');
+  sendSuccess(res, await adminBannerService.updateBanner(req.params.id, req.body, req.files), 'Banner updated successfully');
 });
 
 const remove = catchAsync(async (req, res) => {

@@ -11,6 +11,10 @@ class AdminBannerService extends BaseService {
     const filter = {};
     if (query.status !== undefined) filter.status = query.status;
     if (query.isDeleted !== undefined) filter.isDeleted = query.isDeleted;
+    
+    if (query.search) {
+      filter.title = { $regex: query.search, $options: 'i' };
+    }
 
     const options = {
       page: parseInt(query.page) || 1,
@@ -27,24 +31,24 @@ class AdminBannerService extends BaseService {
     return banner;
   }
 
-  async createBanner(data, file) {
-    if (!file) {
-      throw new AppError('Banner image is required', 400, 'VALIDATION_ERROR');
+  async createBanner(data, files) {
+    if (!files || files.length === 0) {
+      throw new AppError('At least one banner image is required', 400, 'VALIDATION_ERROR');
     }
 
     const payload = { ...data };
-    payload.image = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
+    payload.images = files.map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
     
     return this.create(payload);
   }
 
-  async updateBanner(id, data, file) {
+  async updateBanner(id, data, files) {
     const banner = await bannerRepository.findById(id);
     if (!banner) throw new AppError('Banner not found', 404, 'NOT_FOUND');
 
     const payload = { ...data };
-    if (file) {
-      payload.image = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
+    if (files && files.length > 0) {
+      payload.images = files.map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
     }
 
     return bannerRepository.updateById(id, payload);

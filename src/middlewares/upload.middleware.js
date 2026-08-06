@@ -17,7 +17,13 @@ const storage = multer.diskStorage({
     let folder = 'public/uploads/misc';
     
     if (file.fieldname === 'profileImage') {
-      folder = 'public/uploads/users/profileImages';
+      folder = 'public/uploads/profileImages';
+    } else if (file.fieldname === 'governmentId') {
+      folder = 'public/uploads/vendors/governmentId';
+    } else if (file.fieldname === 'addressProof') {
+      folder = 'public/uploads/vendors/addressProof';
+    } else if (file.fieldname === 'professionalCertificate') {
+      folder = 'public/uploads/vendors/professionalCertificate';
     }
 
     const fullPath = path.join(process.cwd(), folder);

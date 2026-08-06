@@ -5,7 +5,9 @@ const { errorHandler } = require('./middlewares/errorHandler.middleware');
 const path = require('path');
 
 const app = express();
+const cors = require('cors');
 
+app.use(cors());
 app.use(express.json());
 // Serve the 'public' folder so uploads can be accessed
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
@@ -19,11 +21,13 @@ app.get('/health', (req, res) => {
 const userRoutes = require('./modules/user/user.routes');
 const vendorRoutes = require('./modules/vendor/vendor.routes');
 const adminRoutes = require('./admin/admin.routes');
+const cmsCommonRoutes = require('./common/cms/cms.common.routes');
 
 // Mount Routes
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/vendor', vendorRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/common/cms', cmsCommonRoutes);
 
 // Any 404 handler can go here (optional but recommended)
 app.use((req, res, next) => {
