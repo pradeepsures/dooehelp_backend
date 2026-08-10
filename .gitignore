@@ -43,6 +43,7 @@ out/
 .DS_Store
 Thumbs.db
 
+
 # Archives / Compressed files
 *.zip
 *.tar.gz
