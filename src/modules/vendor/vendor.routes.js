@@ -8,4 +8,6 @@ router.use('/auth', require('./auth/auth.routes'));
 // Protected vendor routes
 router.use(protect, restrictTo('vendor'));
 
+router.use('/category', require('./category/category.routes'));
+
 module.exports = router;
