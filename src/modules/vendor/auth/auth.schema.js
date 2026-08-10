@@ -21,7 +21,19 @@ const verifyOtpSchema = Joi.object({
 const updateProfileSchema = Joi.object({
   name: Joi.string().trim().optional(),
   gender: Joi.string().valid('male', 'female', 'other').optional(),
-  yearOfExperience: Joi.number().optional()
+  yearOfExperience: Joi.number().optional(),
+  categories: Joi.alternatives().try(Joi.array().items(Joi.string().regex(/^[0-9a-fA-F]{24}$/)), Joi.string().trim()).optional(),
+  skills: Joi.alternatives().try(Joi.array().items(Joi.string()), Joi.string().trim()).optional(),
+  tools: Joi.alternatives().try(Joi.array().items(Joi.string()), Joi.string().trim()).optional(),
+  onlineStatus: Joi.string().valid('online', 'offline').optional(),
+  city: Joi.string().trim().optional(),
+  address: Joi.string().trim().optional(),
+  lat: Joi.number().optional(),
+  long: Joi.number().optional(),
+  location: Joi.object({
+    lat: Joi.number().optional(),
+    long: Joi.number().optional()
+  }).optional()
 });
 
 module.exports = {

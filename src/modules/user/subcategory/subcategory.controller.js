@@ -11,4 +11,12 @@ const getOne = catchAsync(async (req, res) => {
   sendSuccess(res, await subcategoryService.getActiveSubcategoryDetails(req.params.id), 'Subcategory details retrieved successfully');
 });
 
-module.exports = { list, getOne };
+const getByCategory = catchAsync(async (req, res) => {
+  const result = await subcategoryService.getActiveSubcategories({
+    ...req.query,
+    categoryId: req.params.categoryId
+  });
+  sendPaginated(res, result.data, result.pagination, 'Subcategories retrieved successfully');
+});
+
+module.exports = { list, getOne, getByCategory };

@@ -1,8 +1,7 @@
 const router = require('express').Router();
-const controller = require('./subcategory.controller');
+const controller = require('./admin-user.controller');
 
 router.get('/', controller.list);
-router.get('/category/:categoryId', controller.getByCategory);
 router.get('/:id', controller.getOne);
 
 module.exports = router;

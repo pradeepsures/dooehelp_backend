@@ -34,6 +34,22 @@ const userSchema = new mongoose.Schema({
     default: 'user', 
     enum: ['user'] 
   },
+  address: {
+    type: String,
+    default: null
+  },
+  walletBalance: {
+    type: Number,
+    default: 0
+  },
+  status: {
+    type: Boolean,
+    default: true
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
   otp: { 
     type: String 
   },

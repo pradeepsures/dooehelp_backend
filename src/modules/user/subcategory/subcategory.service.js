@@ -1,6 +1,7 @@
 const BaseService = require('../../../core/BaseService');
 const subcategoryRepository = require('./subcategory.repository');
 const categoryRepository = require('../category/category.repository');
+const includedServiceRepository = require('./included-service.repository');
 const AppError = require('../../../core/AppError');
 
 class SubcategoryService extends BaseService {
@@ -21,7 +22,9 @@ class SubcategoryService extends BaseService {
     };
 
     if (query.categoryId) {
-      if (!activeCategoryIds.includes(query.categoryId)) {
+      const mongoose = require('mongoose');
+      const isValidObjectId = mongoose.Types.ObjectId.isValid(query.categoryId);
+      if (!isValidObjectId || !activeCategoryIds.includes(query.categoryId.toString())) {
         // category is inactive or doesn't exist
         return { 
           data: [], 
@@ -38,6 +41,29 @@ class SubcategoryService extends BaseService {
       filter.categoryId = query.categoryId;
     } else {
       filter.categoryId = { $in: activeCategoryIds };
+    }
+
+    if (query.price !== undefined) {
+      const priceVal = Number(query.price);
+      if (!isNaN(priceVal)) {
+        filter.price = priceVal;
+      }
+    }
+
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filter.price = filter.price || {};
+      if (query.minPrice !== undefined) {
+        const minVal = Number(query.minPrice);
+        if (!isNaN(minVal)) {
+          filter.price.$gte = minVal;
+        }
+      }
+      if (query.maxPrice !== undefined) {
+        const maxVal = Number(query.maxPrice);
+        if (!isNaN(maxVal)) {
+          filter.price.$lte = maxVal;
+        }
+      }
     }
 
     const options = {
@@ -62,8 +88,29 @@ class SubcategoryService extends BaseService {
     if (!subcategory.categoryId || !subcategory.categoryId.status || subcategory.categoryId.isDeleted) {
       throw new AppError('Subcategory not found or inactive', 404, 'NOT_FOUND');
     }
+
+    const includedServices = await includedServiceRepository.findAll({
+      subCategoryId: id,
+      status: true,
+      isDeleted: false
+    });
+
+    const commentRepository = require('../comment/comment.repository');
+    const comments = await commentRepository.findAll(
+      { subCategoryId: id, isDeleted: false },
+      { 
+        populate: {
+          path: 'userId',
+          select: 'name profileImage email phoneNumber'
+        }
+      }
+    );
     
-    return subcategory;
+    return {
+      ...subcategory,
+      includedServices,
+      comments
+    };
   }
 }
 

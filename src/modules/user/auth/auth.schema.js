@@ -9,7 +9,8 @@ const registerSchema = Joi.object({
   email: Joi.string().email().trim().optional(),
   lat: Joi.number().optional(),
   long: Joi.number().optional(),
-  referredBy: Joi.string().trim().optional()
+  referredBy: Joi.string().trim().optional(),
+  address: Joi.string().trim().optional()
 });
 
 const sendOtpSchema = Joi.object({
@@ -34,7 +35,8 @@ const updateProfileSchema = Joi.object({
   name: Joi.string().trim().optional(),
   email: Joi.string().email().trim().optional(),
   lat: Joi.number().optional(),
-  long: Joi.number().optional()
+  long: Joi.number().optional(),
+  address: Joi.string().trim().optional()
 });
 
 module.exports = {

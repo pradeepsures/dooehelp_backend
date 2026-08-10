@@ -21,17 +21,60 @@ exports.refreshToken = catchAsync(async (req, res) => {
 });
 
 exports.getProfile = catchAsync(async (req, res) => {
-  const vendor = await authService.getById(req.user._id);
+  const vendor = await authService.repository.findById(req.user._id, { populate: 'categories' });
   sendSuccess(res, vendor, 'Vendor profile retrieved successfully');
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, gender, yearOfExperience } = req.body;
+  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long } = req.body;
   const updateData = {};
 
-  if (name) updateData.name = name;
-  if (gender) updateData.gender = gender;
-  if (yearOfExperience) updateData.yearOfExperience = yearOfExperience;
+  if (name !== undefined) updateData.name = name;
+  if (gender !== undefined) updateData.gender = gender;
+  if (yearOfExperience !== undefined) updateData.yearOfExperience = yearOfExperience === "" ? null : Number(yearOfExperience);
+  if (onlineStatus !== undefined) updateData.onlineStatus = onlineStatus;
+  if (city !== undefined) updateData.city = city;
+  if (address !== undefined) updateData.address = address;
+  if (lat !== undefined || long !== undefined) {
+    updateData.location = updateData.location || {};
+    if (lat !== undefined) updateData.location.lat = lat === "" ? null : Number(lat);
+    if (long !== undefined) updateData.location.long = long === "" ? null : Number(long);
+  }
+
+  if (req.body.location !== undefined) {
+    let loc = req.body.location;
+    if (typeof loc === 'string') {
+      try {
+        loc = JSON.parse(loc);
+      } catch (e) {
+        // Not JSON
+      }
+    }
+    if (loc && typeof loc === 'object') {
+      updateData.location = updateData.location || {};
+      if (loc.lat !== undefined) updateData.location.lat = loc.lat === "" ? null : Number(loc.lat);
+      if (loc.long !== undefined) updateData.location.long = loc.long === "" ? null : Number(loc.long);
+    }
+  }
+
+  function parseArray(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        // Not a JSON string
+      }
+      return val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  if (categories !== undefined) updateData.categories = parseArray(categories);
+  if (skills !== undefined) updateData.skills = parseArray(skills);
+  if (tools !== undefined) updateData.tools = parseArray(tools);
 
   if (req.files) {
     if (req.files['profileImage'] && req.files['profileImage'].length > 0) {
@@ -47,6 +90,24 @@ exports.updateProfile = catchAsync(async (req, res) => {
       updateData.professionalCertificate = req.files['professionalCertificate'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
     }
   }
+
+  // Calculate dynamic profile completion progress
+  const tempVendor = {
+    ...req.user,
+    ...updateData
+  };
+
+  let completion = 10; // Base 10% for phone authentication
+  if (tempVendor.name || tempVendor.gender) completion += 20;
+  if (tempVendor.categories && tempVendor.categories.length > 0) completion += 20;
+  if ((tempVendor.skills && tempVendor.skills.length > 0) || (tempVendor.tools && tempVendor.tools.length > 0)) completion += 20;
+  if (tempVendor.yearOfExperience !== undefined && tempVendor.yearOfExperience !== null) completion += 10;
+  
+  const govDocs = tempVendor.governmentId || [];
+  const addrDocs = tempVendor.addressProof || [];
+  if (govDocs.length > 0 || addrDocs.length > 0) completion += 20;
+
+  updateData.profileCompletion = Math.min(completion, 100);
 
   const updatedVendor = await authService.update(req.user._id, updateData);
   sendSuccess(res, updatedVendor, 'Vendor profile updated successfully');

@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-const subcategorySchema = new mongoose.Schema(
+const includedServiceSchema = new mongoose.Schema(
   {
-    categoryId: {
+    subCategoryId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+      ref: 'Subcategory',
       required: true,
     },
-    name: {
+    title: {
       type: String,
       required: true,
       trim: true,
@@ -15,15 +15,6 @@ const subcategorySchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true,
-    },
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    originalPrice: {
-      type: Number,
-      min: 0,
     },
     image: {
       type: String,
@@ -37,18 +28,10 @@ const subcategorySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    userRequirements: {
-      type: [String],
-      default: [],
-    },
-    equipments: {
-      type: [String],
-      default: [],
-    },
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model('Subcategory', subcategorySchema);
+module.exports = mongoose.model('IncludedService', includedServiceSchema);

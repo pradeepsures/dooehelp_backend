@@ -3,7 +3,7 @@ const authService = require('./auth.service');
 const { sendSuccess } = require('../../../core/response');
 
 exports.register = catchAsync(async (req, res) => {
-  const { phoneNumber, name, email, lat, long, referredBy } = req.body;
+  const { phoneNumber, name, email, lat, long, referredBy, address } = req.body;
 
   const userData = {
     phoneNumber,
@@ -11,6 +11,10 @@ exports.register = catchAsync(async (req, res) => {
     email,
     referredBy
   };
+
+  if (address !== undefined) {
+    userData.address = address;
+  }
 
   if (lat && long) {
     userData.location = { lat: Number(lat), long: Number(long) };
@@ -50,11 +54,12 @@ exports.getProfile = catchAsync(async (req, res) => {
 
 exports.updateProfile = catchAsync(async (req, res) => {
   const userId = req.user._id;
-  const { name, email, lat, long } = req.body;
+  const { name, email, lat, long, address } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
   if (email !== undefined) updateData.email = email;
+  if (address !== undefined) updateData.address = address;
   if (lat && long) updateData.location = { lat: Number(lat), long: Number(long) };
 
   if (req.file) {

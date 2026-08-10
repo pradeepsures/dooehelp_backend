@@ -43,6 +43,63 @@ const vendorSchema = new mongoose.Schema({
   yearOfExperience: {
     type: Number
   },
+  categories: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Category',
+    default: []
+  },
+  skills: {
+    type: [String],
+    default: []
+  },
+  tools: {
+    type: [String],
+    default: []
+  },
+  profileCompletion: {
+    type: Number,
+    default: 10
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'inactive'
+  },
+  onlineStatus: {
+    type: String,
+    enum: ['online', 'offline'],
+    default: 'offline'
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  city: {
+    type: String,
+    default: null
+  },
+  address: {
+    type: String,
+    default: null
+  },
+  location: {
+    lat: {
+      type: Number,
+      default: null
+    },
+    long: {
+      type: Number,
+      default: null
+    }
+  },
+  walletBalance: {
+    type: Number,
+    default: 0
+  },
   otp: {
     type: String
   },
