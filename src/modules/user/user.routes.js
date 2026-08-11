@@ -12,5 +12,9 @@ router.use('/banner', require('./banner/banner.routes'));
 router.use('/category', require('./category/category.routes'));
 router.use('/subcategory', require('./subcategory/subcategory.routes'));
 router.use('/comment', require('./comment/comment.routes'));
+router.use('/cart', require('./cart/cart.routes'));
+router.use('/wishlist', require('./wishlist/wishlist.routes'));
+router.use('/save-for-later', require('./save-for-later/save-for-later.routes'));
+router.use('/bookings', require('./booking/booking.routes'));
 
 module.exports = router;

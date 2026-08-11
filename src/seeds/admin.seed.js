@@ -34,4 +34,4 @@ const seedSuperAdmin = async () => {
   }
 };
 
-seedSuperAdmin();
+// seedSuperAdmin();
