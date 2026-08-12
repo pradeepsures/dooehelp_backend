@@ -72,6 +72,19 @@ exports.acceptBooking = catchAsync(async (req, res) => {
     throw new AppError('Booking is already accepted', 400, 'BAD_REQUEST');
   }
 
+  // Check if the vendor is already busy with another active booking at the same date and time slot
+  const sameTimeBooking = await Booking.findOne({
+    vendorId,
+    bookingStatus: { $in: ['accepted', 'scheduled'] },
+    date: booking.date,
+    timeSlot: booking.timeSlot,
+    _id: { $ne: booking._id }
+  });
+
+  if (sameTimeBooking) {
+    throw new AppError('You already have an accepted/scheduled booking at this date and time slot', 400, 'BAD_REQUEST');
+  }
+
   // Update status to accepted
   booking.bookingStatus = 'accepted';
   await booking.save();

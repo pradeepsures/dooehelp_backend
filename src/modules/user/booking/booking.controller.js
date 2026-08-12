@@ -3,7 +3,8 @@ const bookingService = require('./booking.service');
 const { sendSuccess, sendCreated } = require('../../../core/response');
 
 exports.getSlots = catchAsync(async (req, res) => {
-  const slots = await bookingService.getAvailableSlots();
+  const { categoryId } = req.query;
+  const slots = await bookingService.getAvailableSlots(req.user._id, categoryId);
   sendSuccess(res, slots, 'Available date and time slots fetched successfully');
 });
 
