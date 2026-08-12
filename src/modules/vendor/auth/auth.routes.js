@@ -17,8 +17,10 @@ router.use(restrictTo('vendor'));
 router.get('/profile', authController.getProfile);
 router.put('/profile', uploadMiddleware.fields([
   { name: 'profileImage', maxCount: 1 },
-  { name: 'governmentId', maxCount: 6 },
-  { name: 'addressProof', maxCount: 6 },
+  { name: 'adharFront', maxCount: 1 },
+  { name: 'adharBack', maxCount: 1 },
+  { name: 'panFront', maxCount: 1 },
+  { name: 'panBack', maxCount: 1 },
   { name: 'professionalCertificate', maxCount: 6 }
 ]), validate(updateProfileSchema), authController.updateProfile);
 

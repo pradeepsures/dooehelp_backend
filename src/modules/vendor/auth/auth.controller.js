@@ -26,7 +26,7 @@ exports.getProfile = catchAsync(async (req, res) => {
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long } = req.body;
+  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
@@ -35,6 +35,9 @@ exports.updateProfile = catchAsync(async (req, res) => {
   if (onlineStatus !== undefined) updateData.onlineStatus = onlineStatus;
   if (city !== undefined) updateData.city = city;
   if (address !== undefined) updateData.address = address;
+  if (adharNumber !== undefined) updateData.adharNumber = adharNumber;
+  if (panNumber !== undefined) updateData.panNumber = panNumber;
+
   if (lat !== undefined || long !== undefined) {
     updateData.location = updateData.location || {};
     if (lat !== undefined) updateData.location.lat = lat === "" ? null : Number(lat);
@@ -80,11 +83,17 @@ exports.updateProfile = catchAsync(async (req, res) => {
     if (req.files['profileImage'] && req.files['profileImage'].length > 0) {
       updateData.profileImage = `/${req.files['profileImage'][0].destination}/${req.files['profileImage'][0].filename}`.replace(/\\/g, '/');
     }
-    if (req.files['governmentId']) {
-      updateData.governmentId = req.files['governmentId'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
+    if (req.files['adharFront'] && req.files['adharFront'].length > 0) {
+      updateData.adharFront = `/${req.files['adharFront'][0].destination}/${req.files['adharFront'][0].filename}`.replace(/\\/g, '/');
     }
-    if (req.files['addressProof']) {
-      updateData.addressProof = req.files['addressProof'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
+    if (req.files['adharBack'] && req.files['adharBack'].length > 0) {
+      updateData.adharBack = `/${req.files['adharBack'][0].destination}/${req.files['adharBack'][0].filename}`.replace(/\\/g, '/');
+    }
+    if (req.files['panFront'] && req.files['panFront'].length > 0) {
+      updateData.panFront = `/${req.files['panFront'][0].destination}/${req.files['panFront'][0].filename}`.replace(/\\/g, '/');
+    }
+    if (req.files['panBack'] && req.files['panBack'].length > 0) {
+      updateData.panBack = `/${req.files['panBack'][0].destination}/${req.files['panBack'][0].filename}`.replace(/\\/g, '/');
     }
     if (req.files['professionalCertificate']) {
       updateData.professionalCertificate = req.files['professionalCertificate'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
@@ -103,9 +112,9 @@ exports.updateProfile = catchAsync(async (req, res) => {
   if ((tempVendor.skills && tempVendor.skills.length > 0) || (tempVendor.tools && tempVendor.tools.length > 0)) completion += 20;
   if (tempVendor.yearOfExperience !== undefined && tempVendor.yearOfExperience !== null) completion += 10;
   
-  const govDocs = tempVendor.governmentId || [];
-  const addrDocs = tempVendor.addressProof || [];
-  if (govDocs.length > 0 || addrDocs.length > 0) completion += 20;
+  if (tempVendor.adharNumber || tempVendor.panNumber || tempVendor.adharFront || tempVendor.adharBack || tempVendor.panFront || tempVendor.panBack) {
+    completion += 20;
+  }
 
   updateData.profileCompletion = Math.min(completion, 100);
 

@@ -140,18 +140,89 @@ class BookingService extends BaseService {
     return updatedBooking;
   }
 
-  async getBookings(userId, type = 'upcoming') {
-    this.logger.info({ userId, type }, 'getBookings');
+  async getBookings(userId, query = {}) {
+    this.logger.info({ userId, query }, 'getBookings');
+
+    const {
+      type = 'upcoming',
+      bookingStatus,
+      paymentStatus,
+      paymentMode,
+      date,
+      startDate,
+      endDate,
+      bookingId,
+      categoryId,
+      subcategoryId
+    } = query;
 
     let filter = { userId };
-    if (type === 'upcoming') {
-      filter.bookingStatus = { $in: ['pending', 'assigned', 'accepted', 'scheduled'] };
+
+    // 1. Status Filter (override by bookingStatus if provided)
+    if (bookingStatus) {
+      if (bookingStatus.includes(',')) {
+        filter.bookingStatus = { $in: bookingStatus.split(',').map(s => s.trim()) };
+      } else {
+        filter.bookingStatus = bookingStatus;
+      }
     } else {
-      filter.bookingStatus = { $in: ['completed', 'cancelled', 'declined'] };
+      if (type === 'upcoming') {
+        filter.bookingStatus = { $in: ['pending', 'assigned', 'accepted', 'scheduled'] };
+      } else if (type === 'history') {
+        filter.bookingStatus = { $in: ['completed', 'cancelled', 'declined'] };
+      }
     }
 
+    // 2. Payment Status Filter
+    if (paymentStatus) {
+      filter.paymentStatus = paymentStatus;
+    }
+
+    // 3. Payment Mode Filter
+    if (paymentMode) {
+      filter.paymentMode = paymentMode;
+    }
+
+    // 4. Booking ID Filter
+    if (bookingId) {
+      filter.bookingId = { $regex: bookingId, $options: 'i' };
+    }
+
+    // 5. Date Filters
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      filter.date = { $gte: startOfDay, $lte: endOfDay };
+    } else if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        filter.date.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.date.$lte = end;
+      }
+    }
+
+    // 6. Category/Subcategory ID filters
+    if (categoryId) {
+      filter['items.categoryId'] = categoryId;
+    }
+    if (subcategoryId) {
+      filter['items.subcategoryId'] = subcategoryId;
+    }
+
+    const page = parseInt(query.page) || 1;
+    const limit = parseInt(query.limit);
+    const skip = (page - 1) * limit;
+
     const BookingModel = this.repository.model;
-    const list = await BookingModel.find(filter)
+    let dbQuery = BookingModel.find(filter)
       .populate({
         path: 'vendorId',
         model: 'Vendor',
@@ -162,9 +233,13 @@ class BookingService extends BaseService {
         model: 'Subcategory',
         select: 'name price image originalPrice description'
       })
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
 
+    if (limit && !isNaN(limit)) {
+      dbQuery = dbQuery.skip(skip).limit(limit);
+    }
+
+    const list = await dbQuery.lean();
     return list;
   }
 

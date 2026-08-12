@@ -19,8 +19,7 @@ exports.confirmPayment = catchAsync(async (req, res) => {
 });
 
 exports.getBookings = catchAsync(async (req, res) => {
-  const { type } = req.query; // 'upcoming' or 'history'
-  const bookings = await bookingService.getBookings(req.user._id, type);
+  const bookings = await bookingService.getBookings(req.user._id, req.query);
   sendSuccess(res, bookings, 'Bookings fetched successfully');
 });
 

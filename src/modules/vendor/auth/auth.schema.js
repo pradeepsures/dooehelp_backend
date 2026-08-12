@@ -33,7 +33,9 @@ const updateProfileSchema = Joi.object({
   location: Joi.object({
     lat: Joi.number().optional(),
     long: Joi.number().optional()
-  }).optional()
+  }).optional(),
+  adharNumber: Joi.string().trim().optional(),
+  panNumber: Joi.string().trim().optional(),
 });
 
 module.exports = {

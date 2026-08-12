@@ -26,12 +26,30 @@ const vendorSchema = new mongoose.Schema({
   profileImage: {
     type: String
   },
-  governmentId: {
-    type: [String],
-    validate: [arrayLimit, '{PATH} exceeds the limit of 6']
+  
+  adharNumber: {
+    type: String,
+    default: null
   },
-  addressProof: {
-    type: [String]
+  panNumber: {
+    type: String,
+    default: null
+  },
+  adharFront: {
+    type: String,
+    default: null
+  },
+  adharBack: {
+    type: String,
+    default: null
+  },
+  panFront: {
+    type: String,
+    default: null
+  },
+  panBack: {
+    type: String,
+    default: null
   },
   professionalCertificate: {
     type: [String]
