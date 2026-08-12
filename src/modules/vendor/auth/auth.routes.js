@@ -21,6 +21,7 @@ router.put('/profile', uploadMiddleware.fields([
   { name: 'adharBack', maxCount: 1 },
   { name: 'panFront', maxCount: 1 },
   { name: 'panBack', maxCount: 1 },
+  { name: 'passBookPhoto', maxCount: 1 },
   { name: 'professionalCertificate', maxCount: 6 }
 ]), validate(updateProfileSchema), authController.updateProfile);
 

@@ -26,7 +26,7 @@ exports.getProfile = catchAsync(async (req, res) => {
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber } = req.body;
+  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
@@ -37,6 +37,10 @@ exports.updateProfile = catchAsync(async (req, res) => {
   if (address !== undefined) updateData.address = address;
   if (adharNumber !== undefined) updateData.adharNumber = adharNumber;
   if (panNumber !== undefined) updateData.panNumber = panNumber;
+  if (bankAccuntno !== undefined) updateData.bankAccuntno = bankAccuntno;
+  if (ifscCode !== undefined) updateData.ifscCode = ifscCode;
+  if (accountHolderName !== undefined) updateData.accountHolderName = accountHolderName;
+  if (bankName !== undefined) updateData.bankName = bankName;
 
   if (lat !== undefined || long !== undefined) {
     updateData.location = updateData.location || {};
@@ -94,6 +98,9 @@ exports.updateProfile = catchAsync(async (req, res) => {
     }
     if (req.files['panBack'] && req.files['panBack'].length > 0) {
       updateData.panBack = `/${req.files['panBack'][0].destination}/${req.files['panBack'][0].filename}`.replace(/\\/g, '/');
+    }
+    if (req.files['passBookPhoto'] && req.files['passBookPhoto'].length > 0) {
+      updateData.passBookPhoto = `/${req.files['passBookPhoto'][0].destination}/${req.files['passBookPhoto'][0].filename}`.replace(/\\/g, '/');
     }
     if (req.files['professionalCertificate']) {
       updateData.professionalCertificate = req.files['professionalCertificate'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));

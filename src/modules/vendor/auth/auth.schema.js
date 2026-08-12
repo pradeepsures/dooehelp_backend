@@ -36,6 +36,10 @@ const updateProfileSchema = Joi.object({
   }).optional(),
   adharNumber: Joi.string().trim().optional(),
   panNumber: Joi.string().trim().optional(),
+  bankAccuntno: Joi.string().trim().optional(),
+  ifscCode: Joi.string().trim().optional(),
+  accountHolderName: Joi.string().trim().optional(),
+  bankName: Joi.string().trim().optional(),
 });
 
 module.exports = {

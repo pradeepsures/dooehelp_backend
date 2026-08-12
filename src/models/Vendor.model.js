@@ -54,6 +54,26 @@ const vendorSchema = new mongoose.Schema({
   professionalCertificate: {
     type: [String]
   },
+  bankAccuntno: {
+    type: String,
+    default: null
+  },
+  ifscCode: {
+    type: String,
+    default: null
+  },
+  accountHolderName: {
+    type: String,
+    default: null
+  },
+  bankName: {
+    type: String,
+    default: null
+  },
+  passBookPhoto: {
+    type: String,
+    default: null
+  },
   gender: {
     type: String,
     enum: ['male', 'female', 'other']
