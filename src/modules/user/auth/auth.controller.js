@@ -16,9 +16,7 @@ exports.register = catchAsync(async (req, res) => {
     userData.address = address;
   }
 
-  if (lat && long) {
-    userData.location = { lat: Number(lat), long: Number(long) };
-  }
+
 
   if (req.file) {
     userData.profileImage = `/${req.file.destination}/${req.file.filename}`.replace(/\\/g, '/');
@@ -48,19 +46,24 @@ exports.refreshToken = catchAsync(async (req, res) => {
 
 exports.getProfile = catchAsync(async (req, res) => {
   const userId = req.user._id;
-  const user = await authService.getById(userId);
+  const userDoc = await authService.getById(userId);
+  const user = userDoc.toObject ? userDoc.toObject() : userDoc;
+  
+  const UserAddress = require('../../../models/UserAddress.model');
+  const addresses = await UserAddress.find({ userId, isDeleted: false });
+  user.addresses = addresses;
+
   sendSuccess(res, user, 'Profile fetched successfully');
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
   const userId = req.user._id;
-  const { name, email, lat, long, address } = req.body;
+  const { name, email, address } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
   if (email !== undefined) updateData.email = email;
   if (address !== undefined) updateData.address = address;
-  if (lat && long) updateData.location = { lat: Number(lat), long: Number(long) };
 
   if (req.file) {
     updateData.profileImage = `/${req.file.destination}/${req.file.filename}`.replace(/\\/g, '/');

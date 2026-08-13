@@ -17,10 +17,17 @@ const createBookingSchema = Joi.object({
     'any.only': 'paymentMode must be one of [online, cash]',
     'any.required': 'paymentMode is required'
   }),
-  address: Joi.string().trim().required().messages({
+  address: Joi.string().trim().when('userAddressId', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required()
+  }).messages({
     'string.empty': 'Service address is required',
     'any.required': 'Service address is required'
   }),
+  userAddressId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().messages({
+    'string.pattern.base': 'Invalid User Address ID format'
+  })
 });
 
 module.exports = {

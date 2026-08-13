@@ -138,6 +138,18 @@ const vendorSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  isNewUser: {
+    type: Boolean,
+    default: true
+  },
+  isCompleteProfile: {
+    type: Boolean,
+    default: false
+  },
+  isProfileApproved: {
+    type: Boolean,
+    default: false
+  },
   otp: {
     type: String
   },

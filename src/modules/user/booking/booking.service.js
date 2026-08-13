@@ -126,7 +126,75 @@ class BookingService extends BaseService {
 
   async createBooking(userId, bookingData) {
     this.logger.info({ userId, bookingData }, 'createBooking');
-    const { date, timeSlot, slotType, paymentMode, address } = bookingData;
+    const { date, timeSlot, slotType, paymentMode, address, userAddressId } = bookingData;
+
+    // Fetch user profile location default
+    const user = await User.findById(userId);
+    let bookingLocation = user?.location || { lat: null, long: null };
+
+    const Locality = require('../../../models/Locality.model');
+    const Pincode = require('../../../models/Pincode.model');
+
+    let finalAddress = address;
+    if (userAddressId) {
+      const UserAddress = require('../../../models/UserAddress.model');
+      const savedAddress = await UserAddress.findOne({ _id: userAddressId, userId, isDeleted: false });
+      if (!savedAddress) {
+        throw new AppError('Selected user address not found', 404, 'NOT_FOUND');
+      }
+      if (savedAddress.status !== 'active') {
+        throw new AppError('Selected address is inactive', 400, 'BAD_REQUEST');
+      }
+
+      // Check if service is available in saved address locality or pincode
+      const localityMatch = await Locality.findOne({
+        name: { $regex: new RegExp("^" + savedAddress.locality.trim() + "$", "i") },
+        status: 'active',
+        isDeleted: false
+      });
+      const pincodeMatch = await Pincode.findOne({
+        pincode: { $regex: new RegExp("^" + savedAddress.pin.trim() + "$", "i") },
+        status: 'active',
+        isDeleted: false
+      });
+
+      if (!localityMatch && !pincodeMatch) {
+        throw new AppError('Service is not available in your locality or pincode', 400, 'SERVICE_UNAVAILABLE');
+      }
+
+      // Override coordinates with address coordinates if set
+      if (savedAddress.location && savedAddress.location.lat !== null && savedAddress.location.long !== null) {
+        bookingLocation = {
+          lat: savedAddress.location.lat,
+          long: savedAddress.location.long
+        };
+      }
+      // Formulate formatted address string: Name, Mobile, House/Flat, Locality, Landmark, Address, City, State, PIN, Country
+      const addressParts = [
+        savedAddress.name,
+        savedAddress.mobile ? `Mobile: ${savedAddress.mobile}` : null,
+        savedAddress.houseFlat,
+        savedAddress.locality,
+        savedAddress.landmark,
+        savedAddress.address,
+        savedAddress.city,
+        savedAddress.state,
+        `PIN: ${savedAddress.pin}`,
+        savedAddress.country
+      ].filter(part => part !== undefined && part !== null && String(part).trim() !== '');
+      finalAddress = addressParts.join(', ');
+    } else {
+      // Validate raw address string for active localities or pincodes
+      const activeLocalities = await Locality.find({ status: 'active', isDeleted: false });
+      const activePincodes = await Pincode.find({ status: 'active', isDeleted: false });
+
+      const hasLocalityMatch = activeLocalities.some(loc => new RegExp(loc.name.trim(), 'i').test(address));
+      const hasPincodeMatch = activePincodes.some(pin => new RegExp(pin.pincode.trim(), 'i').test(address));
+
+      if (!hasLocalityMatch && !hasPincodeMatch) {
+        throw new AppError('Service is not available in your locality or pincode', 400, 'SERVICE_UNAVAILABLE');
+      }
+    }
 
     // 1. Get user cart
     const cart = await cartService.getCart(userId);
@@ -168,14 +236,12 @@ class BookingService extends BaseService {
     const deliveryFee = 0; // FREE
     const grandTotal = serviceTotal + taxAndFees + deliveryFee;
 
-    // 5. Fetch user profile location coordinates
-    const user = await User.findById(userId);
-    const location = user?.location || { lat: null, long: null };
+    // 5. Use resolved booking location coordinates
+    const location = bookingLocation;
 
-    // 6. Generate readable bookingId (e.g. #DH-88291-XL)
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    const randomStr = Math.random().toString(36).substring(2, 4).toUpperCase();
-    const bookingId = `#DH-${randomNum}-${randomStr}`;
+    // 6. Generate readable bookingId (e.g. Booking-123456)
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    const bookingId = `Booking-${randomNum}`;
 
     // 7. Create booking
     const newBooking = await this.repository.create({
@@ -189,7 +255,7 @@ class BookingService extends BaseService {
       date: new Date(date),
       timeSlot,
       slotType,
-      address,
+      address: finalAddress,
       location,
       paymentMode,
       paymentStatus: 'pending',

@@ -11,7 +11,16 @@ exports.sendOtp = catchAsync(async (req, res) => {
 exports.verifyOtp = catchAsync(async (req, res) => {
   const { phoneNumber, otp } = req.body;
   const result = await authService.verifyOtp(phoneNumber, otp);
-  sendSuccess(res, result, 'Vendor login successful');
+  
+  const responseData = {
+    isNewUser: result.isNewUser,
+    isCompleteProfile: result.isCompleteProfile,
+    isProfileApproved: result.isProfileApproved,
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken
+  };
+
+  sendSuccess(res, responseData, 'Vendor login successful');
 });
 
 exports.refreshToken = catchAsync(async (req, res) => {
@@ -22,14 +31,21 @@ exports.refreshToken = catchAsync(async (req, res) => {
 
 exports.getProfile = catchAsync(async (req, res) => {
   const vendor = await authService.repository.findById(req.user._id, { populate: 'categories' });
-  sendSuccess(res, vendor, 'Vendor profile retrieved successfully');
+  const responseData = {
+    isNewUser: vendor.isNewUser,
+    isCompleteProfile: vendor.isCompleteProfile,
+    isProfileApproved: vendor.isProfileApproved,
+    vendor
+  };
+  sendSuccess(res, responseData, 'Vendor profile retrieved successfully');
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
+  const { name, email, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
   if (gender !== undefined) updateData.gender = gender;
   if (yearOfExperience !== undefined) updateData.yearOfExperience = yearOfExperience === "" ? null : Number(yearOfExperience);
   if (onlineStatus !== undefined) updateData.onlineStatus = onlineStatus;
@@ -109,7 +125,7 @@ exports.updateProfile = catchAsync(async (req, res) => {
 
   // Calculate dynamic profile completion progress
   const tempVendor = {
-    ...req.user,
+    ...req.user.toObject(),
     ...updateData
   };
 
@@ -125,6 +141,18 @@ exports.updateProfile = catchAsync(async (req, res) => {
 
   updateData.profileCompletion = Math.min(completion, 100);
 
+  // Toggle flags if profile is complete
+  if (updateData.profileCompletion === 100) {
+    updateData.isNewUser = false;
+    updateData.isCompleteProfile = true;
+  }
+
   const updatedVendor = await authService.update(req.user._id, updateData);
-  sendSuccess(res, updatedVendor, 'Vendor profile updated successfully');
+  const responseData = {
+    isNewUser: updatedVendor.isNewUser,
+    isCompleteProfile: updatedVendor.isCompleteProfile,
+    isProfileApproved: updatedVendor.isProfileApproved,
+    vendor: updatedVendor
+  };
+  sendSuccess(res, responseData, 'Vendor profile updated successfully');
 });

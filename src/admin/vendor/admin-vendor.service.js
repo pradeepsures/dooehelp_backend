@@ -38,7 +38,8 @@ class AdminVendorService extends BaseService {
 
     return this.repository.updateById(id, {
       isVerified: true,
-      status: 'active'
+      status: 'active',
+      isProfileApproved: true
     });
   }
 
@@ -48,7 +49,8 @@ class AdminVendorService extends BaseService {
 
     return this.repository.updateById(id, {
       isVerified: false,
-      status: 'inactive'
+      status: 'inactive',
+      isProfileApproved: false
     });
   }
 }

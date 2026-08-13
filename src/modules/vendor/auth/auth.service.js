@@ -59,12 +59,24 @@ class VendorAuthService extends BaseService {
     }
 
     const { accessToken, refreshToken } = this.generateAuthTokens(vendor);
+    
+    // Dynamically resolve status for existing/production data that has 100% completion
+    const isNewUser = vendor.profileCompletion === 100 ? false : vendor.isNewUser;
+    const isCompleteProfile = vendor.profileCompletion === 100 ? true : vendor.isCompleteProfile;
 
     const updatedVendor = await this.repository.updateById(vendor._id, {
-      $unset: { otp: 1, otpExpiresAt: 1 }
+      $unset: { otp: 1, otpExpiresAt: 1 },
+      isNewUser: false,
+      isCompleteProfile
     });
 
-    return { vendor: updatedVendor, accessToken, refreshToken };
+    return {
+      isNewUser,
+      isCompleteProfile: updatedVendor.isCompleteProfile,
+      isProfileApproved: updatedVendor.isProfileApproved,
+      accessToken,
+      refreshToken
+    };
   }
 
   async refreshToken(token) {

@@ -5,31 +5,69 @@ const AppError = require('../../core/AppError');
 const { sendSuccess } = require('../../core/response');
 
 exports.listAllBookings = catchAsync(async (req, res) => {
-  const bookings = await Booking.find()
-    .populate({
-      path: 'userId',
-      model: 'User',
-      select: 'name phoneNumber email profileImage address location'
-    })
-    .populate({
-      path: 'vendorId',
-      model: 'Vendor',
-      select: 'name phoneNumber profileImage location tools skills status'
-    })
-    .populate({
-      path: 'items.subcategoryId',
-      model: 'Subcategory',
-      select: 'name price image originalPrice description'
-    })
-    .populate({
-      path: 'items.categoryId',
-      model: 'Category',
-      select: 'name'
-    })
-    .sort({ createdAt: -1 })
-    .lean();
+  const { page, limit, search, status } = req.query;
+  const filter = {};
 
-  sendSuccess(res, bookings, 'All bookings fetched successfully');
+  if (status && status !== '') {
+    filter.bookingStatus = status;
+  }
+
+  if (search) {
+    const searchRegex = { $regex: search, $options: 'i' };
+    const User = require('../../models/User.model');
+    const [matchingUsers, matchingVendors] = await Promise.all([
+      User.find({
+        $or: [
+          { name: searchRegex },
+          { phoneNumber: searchRegex }
+        ]
+      }).select('_id'),
+      Vendor.find({
+        name: searchRegex
+      }).select('_id')
+    ]);
+
+    const userIds = matchingUsers.map(u => u._id);
+    const vendorIds = matchingVendors.map(v => v._id);
+
+    filter.$or = [
+      { bookingId: searchRegex },
+      { userId: { $in: userIds } },
+      { vendorId: { $in: vendorIds } }
+    ];
+  }
+
+  const { paginate } = require('../../core/paginate');
+  const result = await paginate(Booking, filter, {
+    page: parseInt(page) || 1,
+    limit: parseInt(limit) || 10,
+    sort: { createdAt: -1 },
+    populate: [
+      {
+        path: 'userId',
+        model: 'User',
+        select: 'name phoneNumber email profileImage address location'
+      },
+      {
+        path: 'vendorId',
+        model: 'Vendor',
+        select: 'name phoneNumber profileImage location tools skills status'
+      },
+      {
+        path: 'items.subcategoryId',
+        model: 'Subcategory',
+        select: 'name price image originalPrice description'
+      },
+      {
+        path: 'items.categoryId',
+        model: 'Category',
+        select: 'name'
+      }
+    ]
+  });
+
+  const { sendPaginated } = require('../../core/response');
+  sendPaginated(res, result.data, result.pagination, 'All bookings fetched successfully');
 });
 
 exports.assignPartner = catchAsync(async (req, res) => {
@@ -50,6 +88,11 @@ exports.assignPartner = catchAsync(async (req, res) => {
   const booking = await Booking.findOne({ bookingId });
   if (!booking) {
     throw new AppError('Booking not found', 404, 'NOT_FOUND');
+  }
+
+  // Check if booking is paid
+  if (booking.paymentStatus !== 'paid') {
+    throw new AppError('Booking payment is not paid', 400, 'BAD_REQUEST');
   }
 
   // 3. Update booking

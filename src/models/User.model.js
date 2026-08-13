@@ -14,10 +14,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     sparse: true,
   },
-  location: {
-    lat: { type: Number },
-    long: { type: Number }
-  },
+
   profileImage: {
     type: String
   },

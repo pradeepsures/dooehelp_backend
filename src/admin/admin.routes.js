@@ -18,5 +18,7 @@ router.use('/subcategory', adminSubcategoryRoutes);
 router.use('/vendor', require('./vendor/admin-vendor.routes'));
 router.use('/user', require('./user/admin-user.routes'));
 router.use('/bookings', require('./booking/admin-booking.routes'));
+router.use('/pincodes', require('./pincode/admin-pincode.routes'));
+router.use('/localities', require('./locality/admin-locality.routes'));
 
 module.exports = router;

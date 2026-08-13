@@ -20,6 +20,7 @@ const verifyOtpSchema = Joi.object({
 
 const updateProfileSchema = Joi.object({
   name: Joi.string().trim().optional(),
+  email: Joi.string().trim().email().optional(),
   gender: Joi.string().valid('male', 'female', 'other').optional(),
   yearOfExperience: Joi.number().optional(),
   categories: Joi.alternatives().try(Joi.array().items(Joi.string().regex(/^[0-9a-fA-F]{24}$/)), Joi.string().trim()).optional(),
