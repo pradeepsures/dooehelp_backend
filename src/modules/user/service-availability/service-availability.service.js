@@ -13,7 +13,7 @@ class ServiceAvailabilityService {
     const savedAddress = await UserAddress.findOne({ _id: addressId, isDeleted: false });
     
     // if not found, or not active, service is not available
-    if (!savedAddress || savedAddress.status !== 'active') {
+    if (!savedAddress) {
       return {
         available: false,
         message: 'Address not found or inactive'
@@ -21,14 +21,18 @@ class ServiceAvailabilityService {
     }
 
     // 2. Check if locality or pin match active services
+    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedLocality = escapeRegExp(savedAddress.locality.trim());
+    const escapedPin = escapeRegExp(savedAddress.pin.trim());
+
     const localityMatch = await Locality.findOne({
-      name: { $regex: new RegExp("^" + savedAddress.locality.trim() + "$", "i") },
+      name: { $regex: new RegExp("^" + escapedLocality + "$", "i") },
       status: 'active',
       isDeleted: false
     });
 
     const pincodeMatch = await Pincode.findOne({
-      pincode: { $regex: new RegExp("^" + savedAddress.pin.trim() + "$", "i") },
+      pincode: { $regex: new RegExp("^" + escapedPin + "$", "i") },
       status: 'active',
       isDeleted: false
     });

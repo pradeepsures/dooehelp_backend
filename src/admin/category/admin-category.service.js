@@ -9,9 +9,8 @@ class AdminCategoryService extends BaseService {
   }
 
   async listAll(query = {}) {
-    const filter = {};
+    const filter = { isDeleted: false };
     if (query.status !== undefined) filter.status = query.status;
-    if (query.isDeleted !== undefined) filter.isDeleted = query.isDeleted;
     
     if (query.search) {
       filter.name = { $regex: query.search, $options: 'i' };

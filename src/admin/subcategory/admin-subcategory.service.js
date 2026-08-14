@@ -25,9 +25,8 @@ class AdminSubcategoryService extends BaseService {
   }
 
   async listAll(query = {}) {
-    const filter = {};
+    const filter = { isDeleted: false };
     if (query.status !== undefined) filter.status = query.status;
-    if (query.isDeleted !== undefined) filter.isDeleted = query.isDeleted;
     if (query.categoryId) filter.categoryId = query.categoryId;
     
     if (query.search) {

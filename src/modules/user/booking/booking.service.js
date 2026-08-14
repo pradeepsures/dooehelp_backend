@@ -145,13 +145,17 @@ class BookingService extends BaseService {
     // }
 
     // Check if service is available in saved address locality or pincode
+    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedLocality = escapeRegExp(savedAddress.locality.trim());
+    const escapedPin = escapeRegExp(savedAddress.pin.trim());
+
     const localityMatch = await Locality.findOne({
-      name: { $regex: new RegExp("^" + savedAddress.locality.trim() + "$", "i") },
+      name: { $regex: new RegExp("^" + escapedLocality + "$", "i") },
       status: 'active',
       isDeleted: false
     });
     const pincodeMatch = await Pincode.findOne({
-      pincode: { $regex: new RegExp("^" + savedAddress.pin.trim() + "$", "i") },
+      pincode: { $regex: new RegExp("^" + escapedPin + "$", "i") },
       status: 'active',
       isDeleted: false
     });
@@ -256,9 +260,12 @@ class BookingService extends BaseService {
   }
 
   async confirmPayment(userId, bookingId) {
-    this.logger.info({ userId, bookingId }, 'confirmPayment');
+    const mongoose = require('mongoose');
+    const query = mongoose.isValidObjectId(bookingId)
+      ? { _id: bookingId, userId }
+      : { bookingId, userId };
 
-    const booking = await this.repository.findOne({ bookingId, userId });
+    const booking = await this.repository.findOne(query);
     if (!booking) {
       throw new AppError('Booking not found', 404, 'NOT_FOUND');
     }
@@ -406,10 +413,13 @@ class BookingService extends BaseService {
   }
 
   async getBookingDetails(userId, bookingId) {
-    this.logger.info({ userId, bookingId }, 'getBookingDetails');
+    const mongoose = require('mongoose');
+    const query = mongoose.isValidObjectId(bookingId)
+      ? { _id: bookingId, userId }
+      : { bookingId, userId };
 
     const BookingModel = this.repository.model;
-    const booking = await BookingModel.findOne({ bookingId })
+    const booking = await BookingModel.findOne(query)
       .populate({
         path: 'vendorId',
         model: 'Vendor',

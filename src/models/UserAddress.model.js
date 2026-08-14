@@ -59,6 +59,10 @@ const userAddressSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    type: {
+      type: String,
+   default:''
+    },
     location: {
       lat: { type: Number, default: null },
       long: { type: Number, default: null },

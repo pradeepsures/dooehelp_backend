@@ -29,6 +29,7 @@ const createAddressSchema = Joi.object({
     'any.required': 'Address is required',
     'string.empty': 'Address cannot be empty',
   }),
+  type: Joi.string().trim().optional(),
   location: Joi.object({
     lat: Joi.number().allow(null).optional(),
     long: Joi.number().allow(null).optional()
@@ -47,6 +48,7 @@ const updateAddressSchema = Joi.object({
   pin: Joi.string().trim().optional(),
   country: Joi.string().trim().optional(),
   address: Joi.string().trim().optional(),
+  type: Joi.string().trim().optional(),
   location: Joi.object({
     lat: Joi.number().allow(null).optional(),
     long: Joi.number().allow(null).optional()

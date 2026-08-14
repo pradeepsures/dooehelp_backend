@@ -27,7 +27,35 @@ class AddressService extends BaseService {
       limit: parseInt(query.limit) || 50,
       sort: { createdAt: -1 }
     };
-    return this.repository.findMany(filter, options);
+    
+    const result = await this.repository.findMany(filter, options);
+
+    // Fetch active localities and pincodes to check availability
+    const Locality = require('../../../models/Locality.model');
+    const Pincode = require('../../../models/Pincode.model');
+
+    const [activeLocalities, activePincodes] = await Promise.all([
+      Locality.find({ status: 'active', isDeleted: false }, 'name').lean(),
+      Pincode.find({ status: 'active', isDeleted: false }, 'pincode').lean()
+    ]);
+
+    const localityNamesSet = new Set(activeLocalities.map(l => l.name.trim().toLowerCase()));
+    const pincodeValuesSet = new Set(activePincodes.map(p => p.pincode.trim().toLowerCase()));
+
+    result.data = result.data.map(address => {
+      const addressLocality = address.locality ? address.locality.trim().toLowerCase() : '';
+      const addressPin = address.pin ? address.pin.trim().toLowerCase() : '';
+      
+      const available = localityNamesSet.has(addressLocality) || pincodeValuesSet.has(addressPin);
+
+      return {
+        ...address,
+        available,
+        isAvailable: available
+      };
+    });
+
+    return result;
   }
 
   async getAddress(addressId, userId) {
