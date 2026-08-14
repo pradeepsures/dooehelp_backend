@@ -140,9 +140,9 @@ class BookingService extends BaseService {
     if (!savedAddress) {
       throw new AppError('Selected user address not found', 404, 'NOT_FOUND');
     }
-    if (savedAddress.status !== 'active') {
-      throw new AppError('Selected address is inactive', 400, 'BAD_REQUEST');
-    }
+    // if (savedAddress.status !== 'active') {
+    //   throw new AppError('Selected address is inactive', 400, 'BAD_REQUEST');
+    // }
 
     // Check if service is available in saved address locality or pincode
     const localityMatch = await Locality.findOne({
