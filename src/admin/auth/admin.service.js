@@ -12,7 +12,7 @@ class AdminService extends BaseService {
     const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
     const refreshSecret = process.env.JWT_REFRESH_SECRET || 'supersecret_doorhelp_refresh_key';
     
-    const accessToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, secret, { expiresIn: '24h' });
+    const accessToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, secret, { expiresIn: '7h' });
     const refreshToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, refreshSecret, { expiresIn: '7d' });
     
     return { accessToken, refreshToken };
@@ -65,8 +65,7 @@ class AdminService extends BaseService {
         throw new AppError('Admin not found', 404, 'NOT_FOUND');
       }
 
-      const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
-      const accessToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, secret, { expiresIn: '24h' });
+      const accessToken = jwt.sign({ _id: admin._id.toString(), role: admin.role }, secret, { expiresIn: '2h' });
       return { accessToken };
     } catch (error) {
       throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');

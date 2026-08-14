@@ -20,14 +20,14 @@ class AdminVendorService extends BaseService {
       page: parseInt(query.page) || 1,
       limit: parseInt(query.limit) || 10,
       sort: { createdAt: -1 },
-      populate: 'categories'
+      populate: ['categories', 'localities']
     };
 
     return this.getAll(filter, options);
   }
 
   async getOne(id) {
-    const vendor = await this.repository.findOne({ _id: id, isDeleted: false }, { populate: 'categories' });
+    const vendor = await this.repository.findOne({ _id: id, isDeleted: false }, { populate: ['categories', 'localities'] });
     if (!vendor) throw new AppError('Vendor not found', 404, 'NOT_FOUND');
     return vendor;
   }

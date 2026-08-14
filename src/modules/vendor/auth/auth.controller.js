@@ -30,7 +30,7 @@ exports.refreshToken = catchAsync(async (req, res) => {
 });
 
 exports.getProfile = catchAsync(async (req, res) => {
-  const vendor = await authService.repository.findById(req.user._id, { populate: 'categories' });
+  const vendor = await authService.repository.findById(req.user._id, { populate: ['categories', 'localities'] });
   const responseData = {
     isNewUser: vendor.isNewUser,
     isCompleteProfile: vendor.isCompleteProfile,
@@ -41,7 +41,7 @@ exports.getProfile = catchAsync(async (req, res) => {
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, email, gender, yearOfExperience, categories, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
+  const { name, email, gender, yearOfExperience, categories, localities, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
@@ -96,6 +96,7 @@ exports.updateProfile = catchAsync(async (req, res) => {
   }
 
   if (categories !== undefined) updateData.categories = parseArray(categories);
+  if (localities !== undefined) updateData.localities = parseArray(localities);
   if (skills !== undefined) updateData.skills = parseArray(skills);
   if (tools !== undefined) updateData.tools = parseArray(tools);
 
@@ -129,15 +130,11 @@ exports.updateProfile = catchAsync(async (req, res) => {
     ...updateData
   };
 
-  let completion = 10; // Base 10% for phone authentication
-  if (tempVendor.name || tempVendor.gender) completion += 20;
+  let completion = 20; // Base 20% for phone authentication
+  if (tempVendor.name) completion += 20;
+  if (tempVendor.gender) completion += 20;
   if (tempVendor.categories && tempVendor.categories.length > 0) completion += 20;
-  if ((tempVendor.skills && tempVendor.skills.length > 0) || (tempVendor.tools && tempVendor.tools.length > 0)) completion += 20;
-  if (tempVendor.yearOfExperience !== undefined && tempVendor.yearOfExperience !== null) completion += 10;
-  
-  if (tempVendor.adharNumber || tempVendor.panNumber || tempVendor.adharFront || tempVendor.adharBack || tempVendor.panFront || tempVendor.panBack) {
-    completion += 20;
-  }
+  if (tempVendor.localities && tempVendor.localities.length > 0) completion += 20;
 
   updateData.profileCompletion = Math.min(completion, 100);
 
@@ -147,7 +144,8 @@ exports.updateProfile = catchAsync(async (req, res) => {
     updateData.isCompleteProfile = true;
   }
 
-  const updatedVendor = await authService.update(req.user._id, updateData);
+  await authService.update(req.user._id, updateData);
+  const updatedVendor = await authService.repository.findById(req.user._id, { populate: ['categories', 'localities'] });
   const responseData = {
     isNewUser: updatedVendor.isNewUser,
     isCompleteProfile: updatedVendor.isCompleteProfile,

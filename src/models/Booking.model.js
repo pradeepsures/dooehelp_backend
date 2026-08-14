@@ -96,8 +96,28 @@ const bookingSchema = new mongoose.Schema(
     },
     bookingStatus: {
       type: String,
-      enum: ['pending', 'assigned', 'accepted', 'declined', 'completed', 'cancelled', 'scheduled'],
+      enum: ['pending', 'assigned', 'accepted', 'declined', 'completed', 'cancelled', 'scheduled', 'active'],
       default: 'pending',
+    },
+    beforeWorkImage: {
+      type: [String],
+      default: [],
+    },
+    afterWorkImage: {
+      type: [String],
+      default: [],
+    },
+    startOtp: {
+      type: String,
+      default: null,
+    },
+    startOtpExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    isOtpVerified: {
+      type: Boolean,
+      default: false,
     },
     declinedVendors: [
       {

@@ -17,7 +17,7 @@ class UserAuthService extends BaseService {
     const refreshSecret = process.env.JWT_REFRESH_SECRET || 'supersecret_doorhelp_refresh_key';
 
     // accessToken expires in 15 minutes, refreshToken expires in 7 days
-    const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '15m' });
+    const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '7h' });
     const refreshToken = jwt.sign({ _id: user._id.toString(), role: user.role }, refreshSecret, { expiresIn: '7d' });
 
     return { accessToken, refreshToken };
@@ -124,7 +124,7 @@ class UserAuthService extends BaseService {
 
       // Generate only a new access token
       const secret = process.env.JWT_SECRET || 'supersecret_doorhelp_key';
-      const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '15m' });
+      const accessToken = jwt.sign({ _id: user._id.toString(), role: user.role }, secret, { expiresIn: '2h' });
 
       return { accessToken };
     } catch (error) {

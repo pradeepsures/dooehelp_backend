@@ -86,6 +86,11 @@ const vendorSchema = new mongoose.Schema({
     ref: 'Category',
     default: []
   },
+  localities: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Locality',
+    default: []
+  },
   skills: {
     type: [String],
     default: []

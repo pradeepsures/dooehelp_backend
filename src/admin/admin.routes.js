@@ -20,5 +20,6 @@ router.use('/user', require('./user/admin-user.routes'));
 router.use('/bookings', require('./booking/admin-booking.routes'));
 router.use('/pincodes', require('./pincode/admin-pincode.routes'));
 router.use('/localities', require('./locality/admin-locality.routes'));
+router.use('/dashboard', require('./dashboard/admin-dashboard.routes'));
 
 module.exports = router;

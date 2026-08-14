@@ -24,6 +24,10 @@ const storage = multer.diskStorage({
       folder = 'public/uploads/vendors/addressProof';
     } else if (file.fieldname === 'professionalCertificate') {
       folder = 'public/uploads/vendors/professionalCertificate';
+    } else if (file.fieldname === 'beforeWorkImage') {
+      folder = 'public/uploads/bookings/beforeWork';
+    } else if (file.fieldname === 'afterWorkImage') {
+      folder = 'public/uploads/bookings/afterWork';
     }
 
     const fullPath = path.join(process.cwd(), folder);
