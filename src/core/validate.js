@@ -48,4 +48,24 @@ const validateQuery = (schema) => (req, _res, next) => {
   next()
 }
 
-module.exports = { validate, validateQuery }
+/**
+ * Validate path parameters instead of body.
+ * Usage: router.get('/route/:id', validateParams(schema), controller.fn)
+ */
+const validateParams = (schema) => (req, _res, next) => {
+  const { error, value } = schema.validate(req.params, {
+    abortEarly: false,
+    stripUnknown: true,
+    convert: true,
+  })
+
+  if (error) {
+    const messages = error.details.map((d) => d.message).join(', ')
+    return next(new AppError(messages, 400, 'VALIDATION_ERROR'))
+  }
+
+  req.params = value
+  next()
+}
+
+module.exports = { validate, validateQuery, validateParams }
