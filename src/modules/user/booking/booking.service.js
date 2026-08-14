@@ -361,12 +361,12 @@ class BookingService extends BaseService {
       .populate({
         path: 'vendorId',
         model: 'Vendor',
-        select: 'name phoneNumber profileImage location tools skills status'
+        select: 'name email profileImage'
       })
       .populate({
         path: 'items.subcategoryId',
         model: 'Subcategory',
-        select: 'name price image originalPrice description'
+        select: 'image'
       })
       .sort({ createdAt: -1 });
 
@@ -375,7 +375,34 @@ class BookingService extends BaseService {
     }
 
     const list = await dbQuery.lean();
-    return list;
+
+    return list.map(booking => {
+      const firstItem = booking.items && booking.items[0];
+      const serviceImage = firstItem?.subcategoryId?.image || '';
+
+      const response = {
+        _id: booking._id,
+        bookingId: booking.bookingId,
+        date: booking.date,
+        timeSlot: booking.timeSlot,
+        bookingStatus: booking.bookingStatus,
+        serviceName: firstItem?.name || '',
+        serviceImage: serviceImage,
+        image: serviceImage,
+      };
+
+      if (booking.vendorId) {
+        response.vendor = {
+          name: booking.vendorId.name || '',
+          email: booking.vendorId.email || '',
+          image: booking.vendorId.profileImage || '',
+        };
+      } else {
+        response.vendor = null;
+      }
+
+      return response;
+    });
   }
 
   async getBookingDetails(userId, bookingId) {
