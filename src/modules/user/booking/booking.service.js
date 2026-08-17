@@ -245,7 +245,7 @@ class BookingService extends BaseService {
       date: new Date(date),
       timeSlot,
       slotType,
-      address: finalAddress,
+      address,
       location,
       paymentMode,
       paymentStatus: 'pending',
@@ -434,6 +434,10 @@ class BookingService extends BaseService {
         path: 'items.subcategoryId',
         model: 'Subcategory',
         select: 'name price image originalPrice description'
+      })
+      .populate({
+        path: 'address',
+        model: 'UserAddress'
       })
       .lean();
 

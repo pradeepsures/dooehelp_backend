@@ -1,5 +1,6 @@
 const catchAsync = require('../../../core/catchAsync');
 const Booking = require('../../../models/Booking.model');
+const UserAddress = require('../../../models/UserAddress.model');
 const AppError = require('../../../core/AppError');
 const { sendSuccess } = require('../../../core/response');
 
@@ -48,6 +49,10 @@ exports.listVendorBookings = catchAsync(async (req, res) => {
       path: 'items.categoryId',
       model: 'Category',
       select: 'name'
+    })
+    .populate({
+      path: 'address',
+      model: 'UserAddress'
     })
     .sort({ createdAt: -1 })
     .lean();
@@ -101,6 +106,10 @@ exports.acceptBooking = catchAsync(async (req, res) => {
       path: 'items.subcategoryId',
       model: 'Subcategory',
       select: 'name price image'
+    })
+    .populate({
+      path: 'address',
+      model: 'UserAddress'
     })
     .lean();
 
@@ -301,6 +310,10 @@ exports.getBookingDetails = catchAsync(async (req, res) => {
       path: 'items.categoryId',
       model: 'Category',
       select: 'name'
+    })
+    .populate({
+      path: 'address',
+      model: 'UserAddress'
     })
     .lean();
 

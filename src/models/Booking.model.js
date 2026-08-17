@@ -77,8 +77,20 @@ const bookingSchema = new mongoose.Schema(
       required: true,
     },
     address: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'UserAddress',
       required: true,
+      cast: function(v) {
+        if (!v) return v;
+        if (v && typeof v === 'string' && !/^[0-9a-fA-F]{24}$/.test(v)) {
+          return null;
+        }
+        try {
+          return new mongoose.Types.ObjectId(v);
+        } catch (err) {
+          return null;
+        }
+      }
     },
     location: {
       lat: { type: Number, default: null },

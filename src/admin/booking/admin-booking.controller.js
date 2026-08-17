@@ -62,6 +62,10 @@ exports.listAllBookings = catchAsync(async (req, res) => {
         path: 'items.categoryId',
         model: 'Category',
         select: 'name'
+      },
+      {
+        path: 'address',
+        model: 'UserAddress'
       }
     ]
   });
@@ -85,7 +89,12 @@ exports.assignPartner = catchAsync(async (req, res) => {
   }
 
   // 2. Fetch booking
-  const booking = await Booking.findOne({ bookingId });
+  const mongoose = require('mongoose');
+  const query = mongoose.isValidObjectId(bookingId)
+    ? { $or: [{ _id: bookingId }, { bookingId }] }
+    : { bookingId };
+
+  const booking = await Booking.findOne(query);
   if (!booking) {
     throw new AppError('Booking not found', 404, 'NOT_FOUND');
   }
@@ -147,6 +156,10 @@ exports.getBookingDetails = catchAsync(async (req, res) => {
       model: 'Category',
       select: 'name'
     })
+    .populate({
+      path: 'address',
+      model: 'UserAddress'
+    })
     .lean();
 
   if (!booking) {
@@ -155,4 +168,57 @@ exports.getBookingDetails = catchAsync(async (req, res) => {
   }
 
   sendSuccess(res, booking, 'Booking details fetched successfully');
+});
+
+exports.getAvailableVendorsForBooking = catchAsync(async (req, res) => {
+  const { bookingId } = req.params;
+
+  const UserAddress = require('../../models/UserAddress.model');
+  const mongoose = require('mongoose');
+  const query = mongoose.isValidObjectId(bookingId)
+    ? { $or: [{ _id: bookingId }, { bookingId }] }
+    : { bookingId };
+
+  const booking = await Booking.findOne(query).populate({
+    path: 'address',
+    model: 'UserAddress'
+  });
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404, 'NOT_FOUND');
+  }
+
+  const categoryIds = [...new Set(booking.items.map(item => item.categoryId.toString()))];
+
+  const filter = {
+    isDeleted: false,
+    status: 'active',
+    isVerified: true,
+    isProfileApproved: true,
+    categories: { $in: categoryIds }
+  };
+
+  // If address and locality are present, find the matching Locality ID and filter by it
+  if (booking.address && booking.address.locality) {
+    const Locality = require('../../models/Locality.model');
+    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedLocality = escapeRegExp(booking.address.locality.trim());
+    
+    const localityDoc = await Locality.findOne({
+      name: { $regex: new RegExp("^" + escapedLocality + "$", "i") },
+      status: 'active',
+      isDeleted: false
+    });
+
+    if (localityDoc) {
+      filter.localities = localityDoc._id;
+    }
+  }
+
+  const vendors = await Vendor.find(filter)
+    .populate('categories')
+    .populate('localities')
+    .lean();
+
+  sendSuccess(res, vendors, 'Available vendors fetched successfully');
 });
