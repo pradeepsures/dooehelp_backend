@@ -222,3 +222,27 @@ exports.getAvailableVendorsForBooking = catchAsync(async (req, res) => {
 
   sendSuccess(res, vendors, 'Available vendors fetched successfully');
 });
+
+exports.updatePaymentStatusToPaid = catchAsync(async (req, res) => {
+  const { bookingId } = req.params;
+  const mongoose = require('mongoose');
+
+  const query = mongoose.isValidObjectId(bookingId)
+    ? { $or: [{ _id: bookingId }, { bookingId }] }
+    : { bookingId };
+
+  const booking = await Booking.findOne(query);
+  if (!booking) {
+    throw new AppError('Booking not found', 404, 'NOT_FOUND');
+  }
+
+  if (booking.paymentStatus === 'paid') {
+    throw new AppError('Booking is already paid', 400, 'BAD_REQUEST');
+  }
+
+  booking.paymentStatus = 'paid';
+  await booking.save();
+
+  sendSuccess(res, booking, 'Booking payment status updated to paid successfully');
+});
+
