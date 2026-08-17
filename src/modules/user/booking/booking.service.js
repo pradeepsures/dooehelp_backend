@@ -13,53 +13,6 @@ class BookingService extends BaseService {
   async getAvailableSlots(userId, categoryId) {
     this.logger.info({ userId, categoryId }, 'getAvailableSlots');
 
-    let targetCategoryId = categoryId;
-
-    // 1. If categoryId is not provided, fetch it from the user's current cart
-    if (!targetCategoryId) {
-      try {
-        const cart = await cartService.getCart(userId);
-        if (cart && cart.items && cart.items.length > 0) {
-          const firstItem = cart.items[0];
-          if (firstItem.subcategoryId && firstItem.subcategoryId.categoryId) {
-            targetCategoryId = firstItem.subcategoryId.categoryId.toString();
-          }
-        }
-      } catch (err) {
-        this.logger.error(err, 'Error retrieving cart for slot category check');
-      }
-    }
-
-    // 2. Count active vendors serving this category
-    let activeVendorsCount = 0;
-    if (targetCategoryId) {
-      const Vendor = require('../../../models/Vendor.model');
-      activeVendorsCount = await Vendor.countDocuments({
-        categories: targetCategoryId,
-        status: 'active',
-        isDeleted: false
-      });
-    }
-
-    // 3. Setup time ranges for query limits
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const endOf7Days = new Date();
-    endOf7Days.setDate(endOf7Days.getDate() + 7);
-    endOf7Days.setHours(23, 59, 59, 999);
-
-    // 4. Fetch active bookings for this category in the next 7 days
-    let activeBookings = [];
-    if (targetCategoryId && activeVendorsCount > 0) {
-      const BookingModel = this.repository.model;
-      activeBookings = await BookingModel.find({
-        'items.categoryId': targetCategoryId,
-        bookingStatus: { $in: ['pending', 'assigned', 'accepted', 'scheduled'] },
-        date: { $gte: startOfToday, $lte: endOf7Days }
-      }).lean();
-    }
-
     const defaultSlots = {
       morning: ["08:00 AM", "09:30 AM", "11:00 AM"],
       afternoon: ["01:00 PM", "02:30 PM", "04:00 PM"],
@@ -76,7 +29,12 @@ class BookingService extends BaseService {
       const dayOfMonth = date.getDate();
       const dayName = weekdays[date.getDay()];
       const isToday = i === 0;
-      const dateStr = date.toISOString().split('T')[0];
+
+      // Construct date string in local time to avoid UTC day shifts
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
 
       const dailySlots = {
         morning: [],
@@ -86,28 +44,9 @@ class BookingService extends BaseService {
 
       for (const slotType of Object.keys(defaultSlots)) {
         for (const timeStr of defaultSlots[slotType]) {
-          let isAvailable = true;
-
-          if (targetCategoryId) {
-            if (activeVendorsCount === 0) {
-              isAvailable = false;
-            } else {
-              // Count bookings for this category at this day and time slot
-              const bookingsCountAtSlot = activeBookings.filter(booking => {
-                const bookingDayStr = booking.date.toISOString().split('T')[0];
-                return bookingDayStr === dateStr && booking.timeSlot === timeStr;
-              }).length;
-
-              // If bookings meet or exceed active vendor capacity, the slot is busy
-              if (bookingsCountAtSlot >= activeVendorsCount) {
-                isAvailable = false;
-              }
-            }
-          }
-
           dailySlots[slotType].push({
             time: timeStr,
-            isAvailable
+            isAvailable: true
           });
         }
       }
