@@ -210,10 +210,11 @@ exports.verifyStartOtp = catchAsync(async (req, res) => {
   booking.isOtpVerified = true;
   booking.startOtp = null;
   booking.startOtpExpiresAt = null;
+  booking.bookingStatus = 'active';
 
   await booking.save();
 
-  sendSuccess(res, { bookingId: booking.bookingId, isOtpVerified: true }, 'OTP verified successfully. You can now upload before-work image to start the service.');
+  sendSuccess(res, { bookingId: booking.bookingId, isOtpVerified: true, bookingStatus: 'active' }, 'OTP verified successfully. Service started and booking status is now active.');
 });
 
 exports.uploadBeforeImage = catchAsync(async (req, res) => {
@@ -230,8 +231,8 @@ exports.uploadBeforeImage = catchAsync(async (req, res) => {
     throw new AppError('Booking not found or not assigned to you', 404, 'NOT_FOUND');
   }
 
-  if (booking.bookingStatus !== 'accepted' && booking.bookingStatus !== 'scheduled') {
-    throw new AppError('Booking must be accepted or scheduled to start service', 400, 'BAD_REQUEST');
+  if (booking.bookingStatus !== 'active') {
+    throw new AppError('Booking must be active to upload before-work image', 400, 'BAD_REQUEST');
   }
 
   if (!booking.isOtpVerified) {
@@ -249,12 +250,10 @@ exports.uploadBeforeImage = catchAsync(async (req, res) => {
     const beforeWorkImagePaths = req.files['beforeWorkImage'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
     booking.beforeWorkImage = beforeWorkImagePaths;
   }
-  
-  booking.bookingStatus = 'active';
 
   await booking.save();
 
-  sendSuccess(res, booking, 'Service started successfully and booking status is now active.');
+  sendSuccess(res, booking, 'Before-work image uploaded successfully.');
 });
 
 exports.uploadAfterImage = catchAsync(async (req, res) => {
