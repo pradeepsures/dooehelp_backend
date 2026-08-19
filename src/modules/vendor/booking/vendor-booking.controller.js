@@ -238,19 +238,23 @@ exports.uploadBeforeImage = catchAsync(async (req, res) => {
     throw new AppError('Please verify OTP before uploading before-work image', 400, 'BAD_REQUEST');
   }
 
-  // Verify before-work image is uploaded
-  if (!req.files || !req.files['beforeWorkImage'] || req.files['beforeWorkImage'].length === 0) {
-    throw new AppError('Before-work image is required', 400, 'BAD_REQUEST');
+  const hasFiles = req.files && req.files['beforeWorkImage'] && req.files['beforeWorkImage'].length > 0;
+
+  // Verify before-work image is uploaded for outdoor bookings
+  if (!hasFiles && booking.bookingType === 'outdoor') {
+    throw new AppError('Before-work image is required for outdoor bookings', 400, 'BAD_REQUEST');
   }
 
-  const beforeWorkImagePaths = req.files['beforeWorkImage'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
+  if (hasFiles) {
+    const beforeWorkImagePaths = req.files['beforeWorkImage'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
+    booking.beforeWorkImage = beforeWorkImagePaths;
+  }
   
-  booking.beforeWorkImage = beforeWorkImagePaths;
   booking.bookingStatus = 'active';
 
   await booking.save();
 
-  sendSuccess(res, booking, 'Before-work images uploaded successfully. Service started and booking status is now active.');
+  sendSuccess(res, booking, 'Service started successfully and booking status is now active.');
 });
 
 exports.uploadAfterImage = catchAsync(async (req, res) => {
@@ -271,19 +275,21 @@ exports.uploadAfterImage = catchAsync(async (req, res) => {
     throw new AppError('Booking must be active to complete service', 400, 'BAD_REQUEST');
   }
 
-  // Verify after-work image is uploaded
-  if (!req.files || !req.files['afterWorkImage'] || req.files['afterWorkImage'].length === 0) {
-    throw new AppError('After-work image is required to complete service', 400, 'BAD_REQUEST');
+  const hasFiles = req.files && req.files['afterWorkImage'] && req.files['afterWorkImage'].length > 0;
+
+  // Verify after-work image is uploaded for outdoor bookings
+  if (!hasFiles && booking.bookingType === 'outdoor') {
+    throw new AppError('After-work image is required for outdoor bookings', 400, 'BAD_REQUEST');
   }
 
-  const afterWorkImagePaths = req.files['afterWorkImage'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
-
-  booking.afterWorkImage = afterWorkImagePaths;
-  booking.bookingStatus = 'completed';
+  if (hasFiles) {
+    const afterWorkImagePaths = req.files['afterWorkImage'].map(file => `/${file.destination}/${file.filename}`.replace(/\\/g, '/'));
+    booking.afterWorkImage = afterWorkImagePaths;
+  }
 
   await booking.save();
 
-  sendSuccess(res, booking, 'After-work images uploaded successfully. Service completed and booking status is now completed.');
+  sendSuccess(res, booking, 'After-work images saved successfully. Please request and verify completion OTP to complete the service.');
 });
 
 exports.getBookingDetails = catchAsync(async (req, res) => {
@@ -380,4 +386,80 @@ exports.getVendorStats = catchAsync(async (req, res) => {
   };
 
   sendSuccess(res, stats, 'Vendor statistics retrieved successfully');
+});
+
+exports.sendEndOtp = catchAsync(async (req, res) => {
+  const vendorId = req.user._id;
+  const { bookingId } = req.params;
+
+  const mongoose = require('mongoose');
+  const query = mongoose.isValidObjectId(bookingId)
+    ? { _id: bookingId, vendorId }
+    : { bookingId, vendorId };
+
+  const booking = await Booking.findOne(query);
+  if (!booking) {
+    throw new AppError('Booking not found or not assigned to you', 404, 'NOT_FOUND');
+  }
+
+  if (booking.bookingStatus !== 'active') {
+    throw new AppError('Booking must be active to send completion OTP', 400, 'BAD_REQUEST');
+  }
+
+  const generatedOtp = '1234'; // Static completion mock OTP
+  booking.endOtp = generatedOtp;
+  booking.endOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
+  booking.isEndOtpVerified = false;
+
+  await booking.save();
+
+  console.log(`[MOCK SERVICE COMPLETION OTP] OTP for Booking ${booking.bookingId} is: ${generatedOtp}`);
+
+  sendSuccess(res, { bookingId: booking.bookingId }, 'Service completion OTP sent to customer successfully (Mocked to 1234)');
+});
+
+exports.verifyEndOtp = catchAsync(async (req, res) => {
+  const vendorId = req.user._id;
+  const { bookingId } = req.params;
+  const { otp } = req.body;
+
+  const mongoose = require('mongoose');
+  const query = mongoose.isValidObjectId(bookingId)
+    ? { _id: bookingId, vendorId }
+    : { bookingId, vendorId };
+
+  const booking = await Booking.findOne(query);
+  if (!booking) {
+    throw new AppError('Booking not found or not assigned to you', 404, 'NOT_FOUND');
+  }
+
+  if (booking.bookingStatus !== 'active') {
+    throw new AppError('Booking must be active to verify completion OTP', 400, 'BAD_REQUEST');
+  }
+
+  // Validate that if bookingType is outdoor, after-work image must be present
+  if (booking.bookingType === 'outdoor' && (!booking.afterWorkImage || booking.afterWorkImage.length === 0)) {
+    throw new AppError('After-work images are required for outdoor bookings before completing the service.', 400, 'BAD_REQUEST');
+  }
+
+  if (!otp) {
+    throw new AppError('OTP is required', 400, 'BAD_REQUEST');
+  }
+
+  if (booking.endOtp !== otp) {
+    throw new AppError('Invalid OTP', 400, 'INVALID_OTP');
+  }
+
+  if (new Date() > new Date(booking.endOtpExpiresAt)) {
+    throw new AppError('OTP has expired. Please request a new one.', 400, 'OTP_EXPIRED');
+  }
+
+  booking.isEndOtpVerified = true;
+  booking.endOtp = null;
+  booking.endOtpExpiresAt = null;
+  booking.bookingStatus = 'completed';
+
+  await booking.save();
+
+  sendSuccess(res, { bookingId: booking.bookingId, bookingStatus: 'completed' }, 'Completion OTP verified successfully. Service completed.');
 });

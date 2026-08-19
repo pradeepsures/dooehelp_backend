@@ -22,5 +22,7 @@ router.use('/pincodes', require('./pincode/admin-pincode.routes'));
 router.use('/localities', require('./locality/admin-locality.routes'));
 router.use('/dashboard', require('./dashboard/admin-dashboard.routes'));
 router.use('/cms', require('./cms/admin-cms.routes'));
+router.use('/coupons', require('./coupon/admin-coupon.routes'));
+router.use('/platform-fees', require('./platform-fee/admin-platform-fee.routes'));
 
 module.exports = router;

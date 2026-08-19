@@ -65,7 +65,7 @@ class BookingService extends BaseService {
 
   async createBooking(userId, bookingData) {
     this.logger.info({ userId, bookingData }, 'createBooking');
-    const { date, timeSlot, slotType, paymentMode, address } = bookingData;
+    const { date, timeSlot, slotType, paymentMode, address, bookingType } = bookingData;
 
     // Fetch user profile location default
     const user = await User.findById(userId);
@@ -188,7 +188,8 @@ class BookingService extends BaseService {
       location,
       paymentMode,
       paymentStatus: 'pending',
-      bookingStatus: 'pending'
+      bookingStatus: 'pending',
+      bookingType: bookingType || 'indoor'
     });
 
     // 8. Clear cart

@@ -17,6 +17,9 @@ const uploadMiddleware = require('../../../middlewares/upload.middleware');
 router.post('/:bookingId/send-otp', vendorBookingController.sendStartOtp);
 router.post('/:bookingId/verify-otp', vendorBookingController.verifyStartOtp);
 
+router.post('/:bookingId/send-end-otp', vendorBookingController.sendEndOtp);
+router.post('/:bookingId/verify-end-otp', vendorBookingController.verifyEndOtp);
+
 router.put('/:bookingId/upload-before-image', uploadMiddleware.fields([
   { name: 'beforeWorkImage', maxCount: 5 }
 ]), vendorBookingController.uploadBeforeImage);

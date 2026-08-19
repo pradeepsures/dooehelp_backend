@@ -111,6 +111,11 @@ const bookingSchema = new mongoose.Schema(
       enum: ['pending', 'assigned', 'accepted', 'declined', 'completed', 'cancelled', 'scheduled', 'active'],
       default: 'pending',
     },
+    bookingType: {
+      type: String,
+      enum: ['indoor', 'outdoor', 'both'],
+      default: 'indoor',
+    },
     beforeWorkImage: {
       type: [String],
       default: [],
@@ -128,6 +133,18 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
     isOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+    endOtp: {
+      type: String,
+      default: null,
+    },
+    endOtpExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    isEndOtpVerified: {
       type: Boolean,
       default: false,
     },

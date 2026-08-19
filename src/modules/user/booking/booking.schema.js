@@ -21,7 +21,8 @@ const createBookingSchema = Joi.object({
     'string.empty': 'Address ID is required',
     'any.required': 'Address ID is required',
     'string.pattern.base': 'Invalid Address ID format'
-  })
+  }),
+  bookingType: Joi.string().valid('indoor', 'outdoor', 'both').optional().default('indoor')
 });
 
 module.exports = {
