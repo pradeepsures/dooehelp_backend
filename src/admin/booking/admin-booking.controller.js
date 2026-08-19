@@ -198,20 +198,26 @@ exports.getAvailableVendorsForBooking = catchAsync(async (req, res) => {
     categories: { $in: categoryIds }
   };
 
-  // If address and locality are present, find the matching Locality ID and filter by it
+  // If address and locality are present, find matching Locality IDs (allowing sub-localities) and filter by them
   if (booking.address && booking.address.locality) {
     const Locality = require('../../models/Locality.model');
-    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const escapedLocality = escapeRegExp(booking.address.locality.trim());
-    
-    const localityDoc = await Locality.findOne({
-      name: { $regex: new RegExp("^" + escapedLocality + "$", "i") },
+    const activeLocalities = await Locality.find({
       status: 'active',
       isDeleted: false
     });
 
-    if (localityDoc) {
-      filter.localities = localityDoc._id;
+    const addrLoc = booking.address.locality.toLowerCase().trim();
+    const matchedLocalityIds = activeLocalities
+      .filter(loc => {
+        const locName = loc.name.toLowerCase().trim();
+        return locName.includes(addrLoc) || addrLoc.includes(locName);
+      })
+      .map(loc => loc._id);
+
+    if (matchedLocalityIds.length > 0) {
+      filter.localities = { $in: matchedLocalityIds };
+    } else {
+      filter.localities = { $in: [] };
     }
   }
 
