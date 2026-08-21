@@ -3,13 +3,15 @@ const router = express.Router();
 const { protect, restrictTo } = require('../middlewares/auth.middleware');
 
 const adminAuthRoutes = require('./auth/admin.routes');
+const adminPublicRoutes = require('./public/admin-public.routes');
 const adminBannerRoutes = require('./banner/admin-banner.routes');
 const adminCategoryRoutes = require('./category/admin-category.routes');
 const adminSubcategoryRoutes = require('./subcategory/admin-subcategory.routes');
 
 router.use('/auth', adminAuthRoutes);
+router.use('/public', adminPublicRoutes);
 
-// Protect all admin routes except auth
+// Protect all admin routes except auth and public
 router.use(protect, restrictTo('admin', 'superadmin'));
 
 router.use('/banner', adminBannerRoutes);
