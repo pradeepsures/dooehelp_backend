@@ -40,7 +40,40 @@ class AdminUserService extends BaseService {
   async getOne(id) {
     const user = await this.repository.findById(id);
     if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
-    return user;
+
+    const Booking = require('../../models/Booking.model');
+    const bookings = await Booking.find({ userId: id })
+      .populate({
+        path: 'vendorId',
+        model: 'Vendor',
+        select: 'name phoneNumber profileImage location tools skills status'
+      })
+      .populate({
+        path: 'items.subcategoryId',
+        model: 'Subcategory',
+        select: 'name price image originalPrice description'
+      })
+      .populate({
+        path: 'items.variantId',
+        model: 'Variant',
+        select: 'name price image originalPrice description'
+      })
+      .populate({
+        path: 'items.categoryId',
+        model: 'Category',
+        select: 'name'
+      })
+      .populate({
+        path: 'address',
+        model: 'UserAddress'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return {
+      ...user,
+      bookings
+    };
   }
 }
 
