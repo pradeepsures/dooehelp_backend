@@ -70,7 +70,10 @@ class SubcategoryService extends BaseService {
       page: parseInt(query.page) || 1,
       limit: parseInt(query.limit) || 20,
       sort: { createdAt: -1 },
-      populate: 'categoryId'
+      populate: [
+        { path: 'categoryId' },
+        { path: 'variants', match: { isDeleted: false, status: true } }
+      ]
     };
 
     return this.getAll(filter, options);
@@ -78,7 +81,12 @@ class SubcategoryService extends BaseService {
 
   async getActiveSubcategoryDetails(id) {
     this.logger.info({ subcategoryId: id }, 'getActiveSubcategoryDetails');
-    const subcategory = await subcategoryRepository.findById(id, { populate: 'categoryId' });
+    const subcategory = await subcategoryRepository.findById(id, {
+      populate: [
+        { path: 'categoryId' },
+        { path: 'variants', match: { isDeleted: false, status: true } }
+      ]
+    });
     
     if (!subcategory || !subcategory.status || subcategory.isDeleted) {
       throw new AppError('Subcategory not found or inactive', 404, 'NOT_FOUND');
@@ -99,10 +107,16 @@ class SubcategoryService extends BaseService {
     const comments = await commentRepository.findAll(
       { subCategoryId: id, isDeleted: false },
       { 
-        populate: {
-          path: 'userId',
-          select: 'name profileImage email phoneNumber'
-        }
+        populate: [
+          {
+            path: 'userId',
+            select: 'name profileImage email phoneNumber'
+          },
+          {
+            path: 'variantId',
+            select: 'name'
+          }
+        ]
       }
     );
     

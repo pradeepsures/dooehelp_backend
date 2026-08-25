@@ -145,7 +145,17 @@ class BookingService extends BaseService {
       if (!subcat) {
         throw new AppError('One of the services in cart is invalid or deleted', 400, 'INVALID_SERVICE');
       }
-      const itemPrice = subcat.price;
+
+      let itemPrice = subcat.price;
+      let itemName = subcat.name;
+      let variantId = null;
+
+      if (item.variantId) {
+        itemPrice = item.variantId.price;
+        itemName = item.variantId.name;
+        variantId = item.variantId._id || item.variantId;
+      }
+
       const quantity = item.quantity;
       const itemTotal = itemPrice * quantity;
 
@@ -153,9 +163,10 @@ class BookingService extends BaseService {
 
       bookingItems.push({
         subcategoryId: subcat._id,
+        variantId,
         quantity,
         price: itemPrice,
-        name: subcat.name,
+        name: itemName,
         categoryId: subcat.categoryId
       });
     }
@@ -373,6 +384,11 @@ class BookingService extends BaseService {
       .populate({
         path: 'items.subcategoryId',
         model: 'Subcategory',
+        select: 'name price image originalPrice description'
+      })
+      .populate({
+        path: 'items.variantId',
+        model: 'Variant',
         select: 'name price image originalPrice description'
       })
       .populate({

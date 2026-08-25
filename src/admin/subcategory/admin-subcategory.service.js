@@ -2,6 +2,7 @@ const BaseService = require('../../core/BaseService');
 const subcategoryRepository = require('../../modules/user/subcategory/subcategory.repository');
 const categoryRepository = require('../../modules/user/category/category.repository');
 const includedServiceRepository = require('../../modules/user/subcategory/included-service.repository');
+const variantRepository = require('../../modules/user/subcategory/variant.repository');
 const AppError = require('../../core/AppError');
 
 function parseArrayField(field) {
@@ -37,14 +38,22 @@ class AdminSubcategoryService extends BaseService {
       page: parseInt(query.page) || 1,
       limit: parseInt(query.limit) || 10,
       sort: { createdAt: -1 },
-      populate: 'categoryId'
+      populate: [
+        { path: 'categoryId' },
+        { path: 'variants', match: { isDeleted: false } }
+      ]
     };
 
     return this.getAll(filter, options);
   }
 
   async getOne(id) {
-    const subcategory = await subcategoryRepository.findById(id, { populate: 'categoryId' });
+    const subcategory = await subcategoryRepository.findById(id, {
+      populate: [
+        { path: 'categoryId' },
+        { path: 'variants', match: { isDeleted: false } }
+      ]
+    });
     if (!subcategory) throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
     
     const includedServices = await includedServiceRepository.findAll({
@@ -164,6 +173,82 @@ class AdminSubcategoryService extends BaseService {
     }
 
     await includedServiceRepository.updateById(id, { isDeleted: true });
+  }
+
+  // Variant Services
+  async listVariants(subCategoryId, query = {}) {
+    const filter = { subCategoryId, isDeleted: false };
+    if (query.status !== undefined) filter.status = query.status;
+
+    if (query.search) {
+      filter.name = { $regex: query.search, $options: 'i' };
+    }
+
+    const options = {
+      page: parseInt(query.page) || 1,
+      limit: parseInt(query.limit) || 100,
+      sort: { createdAt: -1 }
+    };
+    return variantRepository.findMany(filter, options);
+  }
+
+  async getOneVariant(id) {
+    const variant = await variantRepository.findById(id, { populate: 'subCategoryId' });
+    if (!variant || variant.isDeleted) {
+      throw new AppError('Variant not found', 404, 'NOT_FOUND');
+    }
+    return variant;
+  }
+
+  async createVariant(subCategoryId, data, file) {
+    if (!file) {
+      throw new AppError('Variant image is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Verify subcategory exists
+    const subcategory = await subcategoryRepository.findById(subCategoryId);
+    if (!subcategory || subcategory.isDeleted) {
+      throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
+    }
+
+    const payload = { 
+      ...data,
+      subCategoryId,
+      image: `/${file.destination}/${file.filename}`.replace(/\\/g, '/')
+    };
+    payload.userRequirements = parseArrayField(payload.userRequirements);
+    payload.equipments = parseArrayField(payload.equipments);
+    
+    return variantRepository.create(payload);
+  }
+
+  async updateVariant(id, data, file) {
+    const variant = await variantRepository.findById(id);
+    if (!variant || variant.isDeleted) {
+      throw new AppError('Variant not found', 404, 'NOT_FOUND');
+    }
+
+    const payload = { ...data };
+    if (file) {
+      payload.image = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
+    }
+    if (data.userRequirements !== undefined) {
+      payload.userRequirements = parseArrayField(data.userRequirements);
+    }
+    if (data.equipments !== undefined) {
+      payload.equipments = parseArrayField(data.equipments);
+    }
+
+    return variantRepository.updateById(id, payload);
+  }
+
+  async softDeleteVariant(id) {
+    const variant = await variantRepository.findById(id);
+    if (!variant || variant.isDeleted) {
+      throw new AppError('Variant not found', 404, 'NOT_FOUND');
+    }
+
+    await variantRepository.updateById(id, { isDeleted: true });
   }
 }
 

@@ -12,6 +12,11 @@ const commentSchema = new mongoose.Schema(
       ref: 'Subcategory',
       required: true,
     },
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Variant',
+      default: null,
+    },
     content: {
       type: String,
       required: true,

@@ -20,6 +20,7 @@ const createSubcategorySchema = Joi.object({
     'number.min': 'Original price cannot be negative'
   }),
   status: Joi.boolean().default(true),
+  hasVariants: Joi.boolean().default(false),
   userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
   equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
 });
@@ -31,6 +32,7 @@ const updateSubcategorySchema = Joi.object({
   price: Joi.number().min(0).optional(),
   originalPrice: Joi.number().min(0).optional(),
   status: Joi.boolean().optional(),
+  hasVariants: Joi.boolean().optional(),
   isDeleted: Joi.boolean().optional(),
   userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
   equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
@@ -52,9 +54,42 @@ const updateIncludedServiceSchema = Joi.object({
   isDeleted: Joi.boolean().optional()
 });
 
+const createVariantSchema = Joi.object({
+  name: Joi.string().trim().required().messages({
+    'string.empty': 'Variant name is required',
+    'any.required': 'Variant name is required'
+  }),
+  description: Joi.string().trim().optional(),
+  price: Joi.number().min(0).required().messages({
+    'number.base': 'Price must be a number',
+    'number.min': 'Price cannot be negative',
+    'any.required': 'Price is required'
+  }),
+  originalPrice: Joi.number().min(0).optional().messages({
+    'number.base': 'Original price must be a number',
+    'number.min': 'Original price cannot be negative'
+  }),
+  status: Joi.boolean().default(true),
+  userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
+  equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
+});
+
+const updateVariantSchema = Joi.object({
+  name: Joi.string().trim().optional(),
+  description: Joi.string().trim().optional(),
+  price: Joi.number().min(0).optional(),
+  originalPrice: Joi.number().min(0).optional(),
+  status: Joi.boolean().optional(),
+  isDeleted: Joi.boolean().optional(),
+  userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
+  equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
+});
+
 module.exports = {
   createSubcategorySchema,
   updateSubcategorySchema,
   createIncludedServiceSchema,
-  updateIncludedServiceSchema
+  updateIncludedServiceSchema,
+  createVariantSchema,
+  updateVariantSchema
 };

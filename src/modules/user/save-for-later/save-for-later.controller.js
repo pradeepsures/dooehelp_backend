@@ -8,13 +8,14 @@ exports.getSaveForLater = catchAsync(async (req, res) => {
 });
 
 exports.addToSaveForLater = catchAsync(async (req, res) => {
-  const { subcategoryId } = req.body;
-  const list = await saveForLaterService.addToSaveForLater(req.user._id, subcategoryId);
+  const { subcategoryId, variantId } = req.body;
+  const list = await saveForLaterService.addToSaveForLater(req.user._id, subcategoryId, variantId);
   sendSuccess(res, list, 'Item saved for later successfully');
 });
 
 exports.removeFromSaveForLater = catchAsync(async (req, res) => {
   const { subcategoryId } = req.params;
-  const list = await saveForLaterService.removeFromSaveForLater(req.user._id, subcategoryId);
+  const variantId = req.query.variantId || req.body.variantId;
+  const list = await saveForLaterService.removeFromSaveForLater(req.user._id, subcategoryId, variantId);
   sendSuccess(res, list, 'Item removed from save-for-later list successfully');
 });

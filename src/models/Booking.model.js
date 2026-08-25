@@ -6,6 +6,11 @@ const bookingItemSchema = new mongoose.Schema({
     ref: 'Subcategory',
     required: true,
   },
+  variantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Variant',
+    default: null,
+  },
   quantity: {
     type: Number,
     required: true,
@@ -80,7 +85,7 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserAddress',
       required: true,
-      cast: function(v) {
+      cast: function (v) {
         if (!v) return v;
         if (v && typeof v === 'string' && !/^[0-9a-fA-F]{24}$/.test(v)) {
           return null;

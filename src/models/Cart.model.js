@@ -6,6 +6,11 @@ const cartItemSchema = new mongoose.Schema({
     ref: 'Subcategory',
     required: true,
   },
+  variantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Variant',
+    default: null,
+  },
   quantity: {
     type: Number,
     required: true,

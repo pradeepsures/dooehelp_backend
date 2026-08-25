@@ -14,9 +14,35 @@ class CommentService extends BaseService {
       throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
     }
 
+    // Validate variant if provided
+    if (data.variantId) {
+      const Variant = require('../../../models/Variant.model');
+      const variant = await Variant.findOne({ _id: data.variantId, subCategoryId: data.subCategoryId, isDeleted: false });
+      if (!variant) {
+        throw new AppError('Variant not found', 404, 'NOT_FOUND');
+      }
+    }
+
+    // Verify purchase: Check if there is a completed booking containing this subcategory (and variant if provided)
+    const Booking = require('../../../models/Booking.model');
+    const bookingFilter = {
+      userId,
+      bookingStatus: 'completed',
+      'items.subcategoryId': data.subCategoryId
+    };
+    if (data.variantId) {
+      bookingFilter['items.variantId'] = data.variantId;
+    }
+
+    const hasBooked = await Booking.exists(bookingFilter);
+    if (!hasBooked) {
+      throw new AppError('You can only review services that you have booked and completed', 400, 'BAD_REQUEST');
+    }
+
     const payload = {
       userId,
       subCategoryId: data.subCategoryId,
+      variantId: data.variantId || null,
       content: data.content,
       rating: data.rating !== undefined ? Number(data.rating) : null
     };
@@ -26,15 +52,24 @@ class CommentService extends BaseService {
 
   async listComments(subCategoryId, query = {}) {
     const filter = { subCategoryId, isDeleted: false };
+    if (query.variantId) {
+      filter.variantId = query.variantId;
+    }
     
     const options = {
       page: parseInt(query.page) || 1,
       limit: parseInt(query.limit) || 20,
       sort: { createdAt: -1 },
-      populate: {
-        path: 'userId',
-        select: 'name profileImage email phoneNumber'
-      }
+      populate: [
+        {
+          path: 'userId',
+          select: 'name profileImage email phoneNumber'
+        },
+        {
+          path: 'variantId',
+          select: 'name'
+        }
+      ]
     };
 
     return commentRepository.findMany(filter, options);

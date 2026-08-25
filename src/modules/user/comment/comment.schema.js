@@ -5,6 +5,9 @@ const createCommentSchema = Joi.object({
     'string.pattern.base': 'Invalid Subcategory ID format',
     'any.required': 'Subcategory ID is required'
   }),
+  variantId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional().allow(null).messages({
+    'string.pattern.base': 'Invalid Variant ID format'
+  }),
   content: Joi.string().trim().required().messages({
     'string.empty': 'Comment content is required',
     'any.required': 'Comment content is required'

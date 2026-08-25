@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-const subcategorySchema = new mongoose.Schema(
+const variantSchema = new mongoose.Schema(
   {
-    categoryId: {
+    subCategoryId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+      ref: 'Subcategory',
       required: true,
     },
     name: {
@@ -45,23 +45,10 @@ const subcategorySchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    hasVariants: {
-      type: Boolean,
-      default: false,
-    },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   }
 );
 
-subcategorySchema.virtual('variants', {
-  ref: 'Variant',
-  localField: '_id',
-  foreignField: 'subCategoryId',
-});
-
-module.exports = mongoose.model('Subcategory', subcategorySchema);
-
+module.exports = mongoose.model('Variant', variantSchema);

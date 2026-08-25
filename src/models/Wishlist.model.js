@@ -9,9 +9,16 @@ const wishlistSchema = new mongoose.Schema(
     },
     items: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subcategory',
-        required: true,
+        subcategoryId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Subcategory',
+          required: true,
+        },
+        variantId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Variant',
+          default: null,
+        }
       }
     ],
   },

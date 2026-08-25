@@ -42,4 +42,41 @@ const removeIncluded = catchAsync(async (req, res) => {
   sendSuccess(res, null, 'Included service deleted successfully');
 });
 
-module.exports = { list, getOne, create, update, remove, listIncluded, createIncluded, updateIncluded, removeIncluded };
+const listVariants = catchAsync(async (req, res) => {
+  const result = await adminSubcategoryService.listVariants(req.params.subCategoryId, req.query);
+  sendPaginated(res, result.data, result.pagination, 'Variants retrieved successfully');
+});
+
+const getOneVariant = catchAsync(async (req, res) => {
+  sendSuccess(res, await adminSubcategoryService.getOneVariant(req.params.id), 'Variant details retrieved successfully');
+});
+
+const createVariant = catchAsync(async (req, res) => {
+  sendCreated(res, await adminSubcategoryService.createVariant(req.params.subCategoryId, req.body, req.file), 'Variant created successfully');
+});
+
+const updateVariant = catchAsync(async (req, res) => {
+  sendSuccess(res, await adminSubcategoryService.updateVariant(req.params.id, req.body, req.file), 'Variant updated successfully');
+});
+
+const removeVariant = catchAsync(async (req, res) => {
+  await adminSubcategoryService.softDeleteVariant(req.params.id);
+  sendSuccess(res, null, 'Variant deleted successfully');
+});
+
+module.exports = { 
+  list, 
+  getOne, 
+  create, 
+  update, 
+  remove, 
+  listIncluded, 
+  createIncluded, 
+  updateIncluded, 
+  removeIncluded,
+  listVariants,
+  getOneVariant,
+  createVariant,
+  updateVariant,
+  removeVariant
+};
