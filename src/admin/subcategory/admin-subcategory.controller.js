@@ -25,12 +25,12 @@ const remove = catchAsync(async (req, res) => {
 });
 
 const listIncluded = catchAsync(async (req, res) => {
-  const result = await adminSubcategoryService.listIncludedServices(req.params.subCategoryId, req.query);
+  const result = await adminSubcategoryService.listIncludedServices(req.params.variantId, req.query);
   sendSuccess(res, result.data, 'Included services retrieved successfully');
 });
 
 const createIncluded = catchAsync(async (req, res) => {
-  sendCreated(res, await adminSubcategoryService.createIncludedService(req.params.subCategoryId, req.body, req.file), 'Included service created successfully');
+  sendCreated(res, await adminSubcategoryService.createIncludedService(req.params.variantId, req.body, req.file), 'Included service created successfully');
 });
 
 const updateIncluded = catchAsync(async (req, res) => {

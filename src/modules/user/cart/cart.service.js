@@ -20,7 +20,7 @@ class CartService extends BaseService {
       .populate({
         path: 'items.subcategoryId',
         model: 'Subcategory',
-        select: 'name price originalPrice image description categoryId hasVariants'
+        select: 'name image description categoryId startingPrice'
       })
       .populate({
         path: 'items.variantId',
@@ -37,17 +37,13 @@ class CartService extends BaseService {
     const validItems = [];
 
     for (const item of populatedCart.items) {
-      if (item.subcategoryId) {
+      if (item.variantId) {
         validItems.push(item);
-        if (item.variantId) {
-          serviceTotal += item.variantId.price * item.quantity;
-        } else {
-          serviceTotal += item.subcategoryId.price * item.quantity;
-        }
+        serviceTotal += item.variantId.price * item.quantity;
       }
     }
 
-    const taxAndFees = Math.round(serviceTotal * 0.05);
+    const taxAndFees = 0;
     const deliveryFee = 0; // FREE
     const grandTotal = serviceTotal + taxAndFees + deliveryFee;
 
@@ -64,60 +60,57 @@ class CartService extends BaseService {
     };
   }
 
-  async addToCart(userId, subcategoryId, variantId, quantity = 1) {
-    this.logger.info({ userId, subcategoryId, variantId, quantity }, 'addToCart');
+  async addToCart(userId, variantId, quantity = 1) {
+    this.logger.info({ userId, variantId, quantity }, 'addToCart');
 
-    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
-    if (!subcategory) {
-      throw new AppError('Service not found or inactive', 404, 'NOT_FOUND');
+    const Variant = require('../../../models/Variant.model');
+    const variant = await Variant.findOne({ _id: variantId, isDeleted: false, status: true })
+      .populate('subCategoryId');
+    
+    if (!variant) {
+      throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
     }
 
-    // Validate variant if subcategory has variants
-    if (subcategory.hasVariants) {
-      if (!variantId) {
-        throw new AppError('This service requires a variant selection', 400, 'BAD_REQUEST');
-      }
-      const Variant = require('../../../models/Variant.model');
-      const variant = await Variant.findOne({ _id: variantId, subCategoryId: subcategoryId, isDeleted: false, status: true });
-      if (!variant) {
-        throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
-      }
-    } else {
-      // If no variants, variantId should be forced to null
-      variantId = null;
+    const subcategoryId = variant.subCategoryId._id || variant.subCategoryId;
+    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
+    if (!subcategory) {
+      throw new AppError('Parent service not found or inactive', 404, 'NOT_FOUND');
     }
 
     let cart = await this.repository.findOne({ userId });
     if (!cart) {
       cart = await this.repository.create({ userId, items: [] });
+    } else {
+      // Filter out any legacy cart items that do not have a variantId (since they are invalid now)
+      cart.items = cart.items.filter(item => item.variantId);
     }
 
     const itemIndex = cart.items.findIndex(item => 
-      item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null)
+      item.variantId && item.variantId.toString() === variantId
     );
 
     if (itemIndex > -1) {
       cart.items[itemIndex].quantity += quantity;
     } else {
-      cart.items.push({ subcategoryId, variantId: variantId || null, quantity });
+      cart.items.push({ subcategoryId, variantId, quantity });
     }
 
     await this.repository.updateById(cart._id, { items: cart.items });
     return this.getCart(userId);
   }
 
-  async updateCartItem(userId, subcategoryId, variantId, quantity) {
-    this.logger.info({ userId, subcategoryId, variantId, quantity }, 'updateCartItem');
+  async updateCartItem(userId, variantId, quantity) {
+    this.logger.info({ userId, variantId, quantity }, 'updateCartItem');
 
     const cart = await this.repository.findOne({ userId });
     if (!cart) {
       throw new AppError('Cart not found', 404, 'NOT_FOUND');
     }
+    // Filter out legacy cart items missing variantId
+    cart.items = cart.items.filter(item => item.variantId);
 
     const itemIndex = cart.items.findIndex(item => 
-      item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null)
+      item.variantId && item.variantId.toString() === variantId
     );
     if (itemIndex === -1) {
       throw new AppError('Item not found in cart', 404, 'NOT_FOUND');
@@ -135,17 +128,17 @@ class CartService extends BaseService {
     return this.getCart(userId);
   }
 
-  async removeCartItem(userId, subcategoryId, variantId) {
-    this.logger.info({ userId, subcategoryId, variantId }, 'removeCartItem');
+  async removeCartItem(userId, variantId) {
+    this.logger.info({ userId, variantId }, 'removeCartItem');
 
     const cart = await this.repository.findOne({ userId });
     if (!cart) {
       throw new AppError('Cart not found', 404, 'NOT_FOUND');
     }
 
+    // Filter out legacy cart items missing variantId, and remove the requested item
     const updatedItems = cart.items.filter(item => 
-      !(item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null))
+      item.variantId && item.variantId.toString() !== variantId
     );
     await this.repository.updateById(cart._id, { items: updatedItems });
 

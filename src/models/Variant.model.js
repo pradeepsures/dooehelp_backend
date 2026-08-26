@@ -48,7 +48,15 @@ const variantSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+variantSchema.virtual('includedServices', {
+  ref: 'IncludedService',
+  localField: '_id',
+  foreignField: 'variantId',
+});
 
 module.exports = mongoose.model('Variant', variantSchema);

@@ -16,14 +16,10 @@ const subcategorySchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    originalPrice: {
+    startingPrice: {
       type: Number,
       min: 0,
+      default: 0,
     },
     image: {
       type: String,
@@ -34,18 +30,6 @@ const subcategorySchema = new mongoose.Schema(
       default: true,
     },
     isDeleted: {
-      type: Boolean,
-      default: false,
-    },
-    userRequirements: {
-      type: [String],
-      default: [],
-    },
-    equipments: {
-      type: [String],
-      default: [],
-    },
-    hasVariants: {
       type: Boolean,
       default: false,
     },

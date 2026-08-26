@@ -8,7 +8,7 @@ router.route('/')
   .get(wishlistController.getWishlist)
   .post(validate(addToWishlistSchema), wishlistController.addToWishlist);
 
-router.route('/items/:subcategoryId')
+router.route('/items/:variantId')
   .delete(wishlistController.removeFromWishlist);
 
 module.exports = router;

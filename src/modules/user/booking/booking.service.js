@@ -142,19 +142,14 @@ class BookingService extends BaseService {
 
     for (const item of cartItems) {
       const subcat = item.subcategoryId; // populated
-      if (!subcat) {
+      const variant = item.variantId; // populated
+      if (!subcat || !variant) {
         throw new AppError('One of the services in cart is invalid or deleted', 400, 'INVALID_SERVICE');
       }
 
-      let itemPrice = subcat.price;
-      let itemName = subcat.name;
-      let variantId = null;
-
-      if (item.variantId) {
-        itemPrice = item.variantId.price;
-        itemName = item.variantId.name;
-        variantId = item.variantId._id || item.variantId;
-      }
+      const itemPrice = variant.price;
+      const itemName = variant.name;
+      const variantId = variant._id || variant;
 
       const quantity = item.quantity;
       const itemTotal = itemPrice * quantity;

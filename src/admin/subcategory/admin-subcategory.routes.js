@@ -22,8 +22,8 @@ router.put('/:id', uploadMiddleware.single('image'), validate(updateSubcategoryS
 router.delete('/:id', controller.remove);
 
 // Included Services Routes
-router.get('/:subCategoryId/included-services', controller.listIncluded);
-router.post('/:subCategoryId/included-services', uploadMiddleware.single('image'), validate(createIncludedServiceSchema), controller.createIncluded);
+router.get('/variants/:variantId/included-services', controller.listIncluded);
+router.post('/variants/:variantId/included-services', uploadMiddleware.single('image'), validate(createIncludedServiceSchema), controller.createIncluded);
 router.put('/included-services/:id', uploadMiddleware.single('image'), validate(updateIncludedServiceSchema), controller.updateIncluded);
 router.delete('/included-services/:id', controller.removeIncluded);
 

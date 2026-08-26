@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const includedServiceSchema = new mongoose.Schema(
   {
-    subCategoryId: {
+    variantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Subcategory',
+      ref: 'Variant',
       required: true,
     },
     title: {

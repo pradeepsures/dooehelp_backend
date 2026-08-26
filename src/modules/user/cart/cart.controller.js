@@ -8,22 +8,21 @@ exports.getCart = catchAsync(async (req, res) => {
 });
 
 exports.addToCart = catchAsync(async (req, res) => {
-  const { subcategoryId, variantId, quantity } = req.body;
-  const cart = await cartService.addToCart(req.user._id, subcategoryId, variantId, quantity);
+  const { variantId, quantity } = req.body;
+  const cart = await cartService.addToCart(req.user._id, variantId, quantity);
   sendSuccess(res, cart, 'Item added to cart successfully');
 });
 
 exports.updateCartItem = catchAsync(async (req, res) => {
-  const { subcategoryId } = req.params;
-  const { quantity, variantId } = req.body;
-  const cart = await cartService.updateCartItem(req.user._id, subcategoryId, variantId, quantity);
+  const { variantId } = req.params;
+  const { quantity } = req.body;
+  const cart = await cartService.updateCartItem(req.user._id, variantId, quantity);
   sendSuccess(res, cart, 'Cart item updated successfully');
 });
 
 exports.removeCartItem = catchAsync(async (req, res) => {
-  const { subcategoryId } = req.params;
-  const variantId = req.query.variantId || req.body.variantId;
-  const cart = await cartService.removeCartItem(req.user._id, subcategoryId, variantId);
+  const { variantId } = req.params;
+  const cart = await cartService.removeCartItem(req.user._id, variantId);
   sendSuccess(res, cart, 'Item removed from cart successfully');
 });
 

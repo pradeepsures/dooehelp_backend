@@ -8,7 +8,7 @@ router.route('/')
   .get(saveForLaterController.getSaveForLater)
   .post(validate(addToSaveForLaterSchema), saveForLaterController.addToSaveForLater);
 
-router.route('/items/:subcategoryId')
+router.route('/items/:variantId')
   .delete(saveForLaterController.removeFromSaveForLater);
 
 module.exports = router;

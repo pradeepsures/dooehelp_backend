@@ -9,7 +9,7 @@ router.route('/')
   .post(validate(addToCartSchema), cartController.addToCart)
   .delete(cartController.clearCart);
 
-router.route('/items/:subcategoryId')
+router.route('/items/:variantId')
   .put(validate(updateCartSchema), cartController.updateCartItem)
   .delete(cartController.removeCartItem);
 

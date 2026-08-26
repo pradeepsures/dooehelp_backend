@@ -152,6 +152,11 @@ exports.getBookingDetails = catchAsync(async (req, res) => {
       select: 'name price image originalPrice description'
     })
     .populate({
+      path: 'items.variantId',
+      model: 'Variant',
+      select: 'name price image originalPrice description userRequirements equipments'
+    })
+    .populate({
       path: 'items.categoryId',
       model: 'Category',
       select: 'name'

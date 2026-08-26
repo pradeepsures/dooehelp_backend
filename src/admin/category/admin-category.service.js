@@ -22,13 +22,36 @@ class AdminCategoryService extends BaseService {
       sort: { createdAt: -1 }
     };
 
-    return this.getAll(filter, options);
+    const result = await this.getAll(filter, options);
+    
+    // Append subcategoryCount for each category
+    const dataWithCount = await Promise.all(
+      result.data.map(async (category) => {
+        const count = await subcategoryRepository.count({ categoryId: category._id, isDeleted: false });
+        return {
+          ...category,
+          subcategoryCount: count
+        };
+      })
+    );
+
+    return {
+      data: dataWithCount,
+      pagination: result.pagination
+    };
   }
 
   async getOne(id) {
     const category = await categoryRepository.findById(id);
     if (!category) throw new AppError('Category not found', 404, 'NOT_FOUND');
-    return category;
+    
+    const subcategories = await subcategoryRepository.findAll({ categoryId: id, isDeleted: false });
+    
+    return {
+      ...category,
+      subcategoryCount: subcategories.length,
+      subcategories
+    };
   }
 
   async createCategory(data, file) {

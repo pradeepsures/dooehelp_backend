@@ -9,30 +9,30 @@ class CommentService extends BaseService {
   }
 
   async createComment(userId, data) {
-    const subcategory = await subcategoryRepository.findById(data.subCategoryId);
+    if (!data.variantId) {
+      throw new AppError('Variant ID is required to write a review', 400, 'BAD_REQUEST');
+    }
+
+    const Variant = require('../../../models/Variant.model');
+    const variant = await Variant.findOne({ _id: data.variantId, isDeleted: false });
+    if (!variant) {
+      throw new AppError('Variant not found', 404, 'NOT_FOUND');
+    }
+    const subCategoryId = data.subCategoryId || variant.subCategoryId;
+
+    const subcategory = await subcategoryRepository.findById(subCategoryId);
     if (!subcategory || subcategory.isDeleted) {
       throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
     }
 
-    // Validate variant if provided
-    if (data.variantId) {
-      const Variant = require('../../../models/Variant.model');
-      const variant = await Variant.findOne({ _id: data.variantId, subCategoryId: data.subCategoryId, isDeleted: false });
-      if (!variant) {
-        throw new AppError('Variant not found', 404, 'NOT_FOUND');
-      }
-    }
-
-    // Verify purchase: Check if there is a completed booking containing this subcategory (and variant if provided)
+    // Verify purchase: Check if there is a completed booking containing this variant
     const Booking = require('../../../models/Booking.model');
     const bookingFilter = {
       userId,
       bookingStatus: 'completed',
-      'items.subcategoryId': data.subCategoryId
+      'items.subcategoryId': subCategoryId,
+      'items.variantId': data.variantId
     };
-    if (data.variantId) {
-      bookingFilter['items.variantId'] = data.variantId;
-    }
 
     const hasBooked = await Booking.exists(bookingFilter);
     if (!hasBooked) {
@@ -41,8 +41,8 @@ class CommentService extends BaseService {
 
     const payload = {
       userId,
-      subCategoryId: data.subCategoryId,
-      variantId: data.variantId || null,
+      subCategoryId,
+      variantId: data.variantId,
       content: data.content,
       rating: data.rating !== undefined ? Number(data.rating) : null
     };

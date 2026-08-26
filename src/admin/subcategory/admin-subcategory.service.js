@@ -40,7 +40,11 @@ class AdminSubcategoryService extends BaseService {
       sort: { createdAt: -1 },
       populate: [
         { path: 'categoryId' },
-        { path: 'variants', match: { isDeleted: false } }
+        { 
+          path: 'variants', 
+          match: { isDeleted: false },
+          populate: { path: 'includedServices', match: { isDeleted: false } }
+        }
       ]
     };
 
@@ -51,19 +55,26 @@ class AdminSubcategoryService extends BaseService {
     const subcategory = await subcategoryRepository.findById(id, {
       populate: [
         { path: 'categoryId' },
-        { path: 'variants', match: { isDeleted: false } }
+        { 
+          path: 'variants', 
+          match: { isDeleted: false },
+          populate: { path: 'includedServices', match: { isDeleted: false } }
+        }
       ]
     });
     if (!subcategory) throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
     
-    const includedServices = await includedServiceRepository.findAll({
-      subCategoryId: id,
-      isDeleted: false
-    });
+    const variantsList = subcategory.variants || [];
+    const flatIncludedServices = [];
+    for (const v of variantsList) {
+      if (v.includedServices) {
+        flatIncludedServices.push(...v.includedServices);
+      }
+    }
     
     return {
       ...subcategory,
-      includedServices
+      includedServices: flatIncludedServices
     };
   }
 
@@ -80,8 +91,6 @@ class AdminSubcategoryService extends BaseService {
 
     const payload = { ...data };
     payload.image = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
-    payload.userRequirements = parseArrayField(payload.userRequirements);
-    payload.equipments = parseArrayField(payload.equipments);
     
     return this.create(payload);
   }
@@ -101,13 +110,6 @@ class AdminSubcategoryService extends BaseService {
     if (file) {
       payload.image = `/${file.destination}/${file.filename}`.replace(/\\/g, '/');
     }
-    
-    if (data.userRequirements !== undefined) {
-      payload.userRequirements = parseArrayField(data.userRequirements);
-    }
-    if (data.equipments !== undefined) {
-      payload.equipments = parseArrayField(data.equipments);
-    }
 
     return subcategoryRepository.updateById(id, payload);
   }
@@ -120,8 +122,8 @@ class AdminSubcategoryService extends BaseService {
     this.logger.info({ subcategoryId: id }, 'Subcategory soft deleted');
   }
 
-  async listIncludedServices(subCategoryId, query = {}) {
-    const filter = { subCategoryId, isDeleted: false };
+  async listIncludedServices(variantId, query = {}) {
+    const filter = { variantId, isDeleted: false };
     if (query.status !== undefined) filter.status = query.status;
 
     const options = {
@@ -132,20 +134,20 @@ class AdminSubcategoryService extends BaseService {
     return includedServiceRepository.findMany(filter, options);
   }
 
-  async createIncludedService(subCategoryId, data, file) {
+  async createIncludedService(variantId, data, file) {
     if (!file) {
       throw new AppError('Included service image is required', 400, 'VALIDATION_ERROR');
     }
 
-    // Verify subcategory exists
-    const subcategory = await subcategoryRepository.findById(subCategoryId);
-    if (!subcategory || subcategory.isDeleted) {
-      throw new AppError('Subcategory not found', 404, 'NOT_FOUND');
+    // Verify variant exists
+    const variant = await variantRepository.findById(variantId);
+    if (!variant || variant.isDeleted) {
+      throw new AppError('Variant not found', 404, 'NOT_FOUND');
     }
 
     const payload = { 
       ...data,
-      subCategoryId,
+      variantId,
       image: `/${file.destination}/${file.filename}`.replace(/\\/g, '/')
     };
     

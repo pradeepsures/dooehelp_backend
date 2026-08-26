@@ -20,7 +20,7 @@ class SaveForLaterService extends BaseService {
       .populate({
         path: 'items.subcategoryId',
         model: 'Subcategory',
-        select: 'name price originalPrice image description categoryId hasVariants'
+        select: 'name image description categoryId startingPrice'
       })
       .populate({
         path: 'items.variantId',
@@ -32,48 +32,44 @@ class SaveForLaterService extends BaseService {
     return populatedSaved;
   }
 
-  async addToSaveForLater(userId, subcategoryId, variantId) {
-    this.logger.info({ userId, subcategoryId, variantId }, 'addToSaveForLater');
+  async addToSaveForLater(userId, variantId) {
+    this.logger.info({ userId, variantId }, 'addToSaveForLater');
 
-    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
-    if (!subcategory) {
-      throw new AppError('Service not found or inactive', 404, 'NOT_FOUND');
+    const Variant = require('../../../models/Variant.model');
+    const variant = await Variant.findOne({ _id: variantId, isDeleted: false, status: true })
+      .populate('subCategoryId');
+    
+    if (!variant) {
+      throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
     }
 
-    // Validate variant if subcategory has variants
-    if (subcategory.hasVariants) {
-      if (!variantId) {
-        throw new AppError('This service requires a variant selection', 400, 'BAD_REQUEST');
-      }
-      const Variant = require('../../../models/Variant.model');
-      const variant = await Variant.findOne({ _id: variantId, subCategoryId: subcategoryId, isDeleted: false, status: true });
-      if (!variant) {
-        throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
-      }
-    } else {
-      variantId = null;
+    const subcategoryId = variant.subCategoryId._id || variant.subCategoryId;
+    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
+    if (!subcategory) {
+      throw new AppError('Parent service not found or inactive', 404, 'NOT_FOUND');
     }
 
     let saved = await this.repository.findOne({ userId });
     if (!saved) {
       saved = await this.repository.create({ userId, items: [] });
+    } else {
+      saved.items = saved.items.filter(item => item.variantId);
     }
 
     const itemExists = saved.items.some(item => 
-      item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null)
+      item.variantId && item.variantId.toString() === variantId
     );
 
     if (!itemExists) {
-      saved.items.push({ subcategoryId, variantId: variantId || null });
+      saved.items.push({ subcategoryId, variantId });
       await this.repository.updateById(saved._id, { items: saved.items });
     }
 
     return this.getSaveForLater(userId);
   }
 
-  async removeFromSaveForLater(userId, subcategoryId, variantId) {
-    this.logger.info({ userId, subcategoryId, variantId }, 'removeFromSaveForLater');
+  async removeFromSaveForLater(userId, variantId) {
+    this.logger.info({ userId, variantId }, 'removeFromSaveForLater');
 
     const saved = await this.repository.findOne({ userId });
     if (!saved) {
@@ -81,8 +77,7 @@ class SaveForLaterService extends BaseService {
     }
 
     const updatedItems = saved.items.filter(item => 
-      !(item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null))
+      item.variantId && item.variantId.toString() !== variantId
     );
     await this.repository.updateById(saved._id, { items: updatedItems });
 

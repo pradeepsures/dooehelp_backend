@@ -10,32 +10,23 @@ const createSubcategorySchema = Joi.object({
     'any.required': 'Subcategory name is required'
   }),
   description: Joi.string().trim().optional(),
-  price: Joi.number().min(0).required().messages({
-    'number.base': 'Price must be a number',
-    'number.min': 'Price cannot be negative',
-    'any.required': 'Price is required'
-  }),
-  originalPrice: Joi.number().min(0).optional().messages({
-    'number.base': 'Original price must be a number',
-    'number.min': 'Original price cannot be negative'
+  startingPrice: Joi.number().min(0).optional().messages({
+    'number.base': 'Starting price must be a number',
+    'number.min': 'Starting price cannot be negative'
   }),
   status: Joi.boolean().default(true),
-  hasVariants: Joi.boolean().default(false),
-  userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
-  equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
 });
 
 const updateSubcategorySchema = Joi.object({
   categoryId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
   name: Joi.string().trim().optional(),
   description: Joi.string().trim().optional(),
-  price: Joi.number().min(0).optional(),
-  originalPrice: Joi.number().min(0).optional(),
+  startingPrice: Joi.number().min(0).optional().messages({
+    'number.base': 'Starting price must be a number',
+    'number.min': 'Starting price cannot be negative'
+  }),
   status: Joi.boolean().optional(),
-  hasVariants: Joi.boolean().optional(),
   isDeleted: Joi.boolean().optional(),
-  userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
-  equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
 });
 
 const createIncludedServiceSchema = Joi.object({

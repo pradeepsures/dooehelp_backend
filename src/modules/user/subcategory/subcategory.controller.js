@@ -16,7 +16,28 @@ const getByCategory = catchAsync(async (req, res) => {
     ...req.query,
     categoryId: req.params.categoryId
   });
-  sendPaginated(res, result.data, result.pagination, 'Subcategories retrieved successfully');
+  
+  const cleanData = result.data.map(item => ({
+    _id: item._id,
+    name: item.name,
+    description: item.description,
+    image: item.image,
+    startingPrice: item.startingPrice
+  }));
+
+  sendPaginated(res, cleanData, result.pagination, 'Subcategories retrieved successfully');
 });
 
-module.exports = { list, getOne, getByCategory };
+const getVariantsBySubcategory = catchAsync(async (req, res) => {
+  const { subCategoryId } = req.params;
+  const result = await subcategoryService.getActiveVariantsBySubcategory(subCategoryId);
+  sendSuccess(res, result, 'Variants retrieved successfully');
+});
+
+const getVariantDetails = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await subcategoryService.getActiveVariantDetails(id);
+  sendSuccess(res, result, 'Variant details retrieved successfully');
+});
+
+module.exports = { list, getOne, getByCategory, getVariantsBySubcategory, getVariantDetails };

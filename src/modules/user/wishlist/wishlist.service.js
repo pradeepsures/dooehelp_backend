@@ -20,7 +20,7 @@ class WishlistService extends BaseService {
       .populate({
         path: 'items.subcategoryId',
         model: 'Subcategory',
-        select: 'name price originalPrice image description categoryId hasVariants'
+        select: 'name image description categoryId startingPrice'
       })
       .populate({
         path: 'items.variantId',
@@ -32,48 +32,44 @@ class WishlistService extends BaseService {
     return populatedWishlist;
   }
 
-  async addToWishlist(userId, subcategoryId, variantId) {
-    this.logger.info({ userId, subcategoryId, variantId }, 'addToWishlist');
+  async addToWishlist(userId, variantId) {
+    this.logger.info({ userId, variantId }, 'addToWishlist');
 
-    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
-    if (!subcategory) {
-      throw new AppError('Service not found or inactive', 404, 'NOT_FOUND');
+    const Variant = require('../../../models/Variant.model');
+    const variant = await Variant.findOne({ _id: variantId, isDeleted: false, status: true })
+      .populate('subCategoryId');
+    
+    if (!variant) {
+      throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
     }
 
-    // Validate variant if subcategory has variants
-    if (subcategory.hasVariants) {
-      if (!variantId) {
-        throw new AppError('This service requires a variant selection', 400, 'BAD_REQUEST');
-      }
-      const Variant = require('../../../models/Variant.model');
-      const variant = await Variant.findOne({ _id: variantId, subCategoryId: subcategoryId, isDeleted: false, status: true });
-      if (!variant) {
-        throw new AppError('Selected variant not found or inactive', 404, 'NOT_FOUND');
-      }
-    } else {
-      variantId = null;
+    const subcategoryId = variant.subCategoryId._id || variant.subCategoryId;
+    const subcategory = await Subcategory.findOne({ _id: subcategoryId, isDeleted: false, status: true });
+    if (!subcategory) {
+      throw new AppError('Parent service not found or inactive', 404, 'NOT_FOUND');
     }
 
     let wishlist = await this.repository.findOne({ userId });
     if (!wishlist) {
       wishlist = await this.repository.create({ userId, items: [] });
+    } else {
+      wishlist.items = wishlist.items.filter(item => item.variantId);
     }
 
     const itemExists = wishlist.items.some(item => 
-      item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null)
+      item.variantId && item.variantId.toString() === variantId
     );
 
     if (!itemExists) {
-      wishlist.items.push({ subcategoryId, variantId: variantId || null });
+      wishlist.items.push({ subcategoryId, variantId });
       await this.repository.updateById(wishlist._id, { items: wishlist.items });
     }
 
     return this.getWishlist(userId);
   }
 
-  async removeFromWishlist(userId, subcategoryId, variantId) {
-    this.logger.info({ userId, subcategoryId, variantId }, 'removeFromWishlist');
+  async removeFromWishlist(userId, variantId) {
+    this.logger.info({ userId, variantId }, 'removeFromWishlist');
 
     const wishlist = await this.repository.findOne({ userId });
     if (!wishlist) {
@@ -81,8 +77,7 @@ class WishlistService extends BaseService {
     }
 
     const updatedItems = wishlist.items.filter(item => 
-      !(item.subcategoryId.toString() === subcategoryId && 
-      (item.variantId ? item.variantId.toString() : null) === (variantId ? variantId.toString() : null))
+      item.variantId && item.variantId.toString() !== variantId
     );
     await this.repository.updateById(wishlist._id, { items: updatedItems });
 
