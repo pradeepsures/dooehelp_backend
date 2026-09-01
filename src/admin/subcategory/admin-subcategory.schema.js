@@ -60,6 +60,10 @@ const createVariantSchema = Joi.object({
     'number.base': 'Original price must be a number',
     'number.min': 'Original price cannot be negative'
   }),
+  duration: Joi.number().min(0).optional().messages({
+    'number.base': 'Duration must be a number',
+    'number.min': 'Duration cannot be negative'
+  }),
   status: Joi.boolean().default(true),
   userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),
   equipments: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional()
@@ -70,6 +74,7 @@ const updateVariantSchema = Joi.object({
   description: Joi.string().trim().optional(),
   price: Joi.number().min(0).optional(),
   originalPrice: Joi.number().min(0).optional(),
+  duration: Joi.number().min(0).optional(),
   status: Joi.boolean().optional(),
   isDeleted: Joi.boolean().optional(),
   userRequirements: Joi.alternatives().try(Joi.array().items(Joi.string().trim()), Joi.string().trim()).optional(),

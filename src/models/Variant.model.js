@@ -25,6 +25,10 @@ const variantSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    duration: {
+      type: Number,
+      min: 0,
+    },
     image: {
       type: String,
       required: true,
