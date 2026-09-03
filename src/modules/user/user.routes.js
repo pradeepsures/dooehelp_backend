@@ -6,6 +6,7 @@ const { protect, restrictTo } = require('../../middlewares/auth.middleware');
 router.use('/auth', require('./auth/auth.routes'));
 router.use('/banner', require('./banner/banner.routes'));
 router.use('/service-availability', require('./service-availability/service-availability.routes'));
+router.use('/refer-earn', require('./refer-earn/refer-earn.routes'));
 
 // Protected user routes
 router.use(protect, restrictTo('user'));
