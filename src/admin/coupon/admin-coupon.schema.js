@@ -17,8 +17,6 @@ const createCouponSchema = Joi.object({
     'number.positive': 'Discount value must be greater than zero',
     'any.required': 'Discount value is required'
   }),
-  minOrderValue: Joi.number().min(0).optional().default(0),
-  maxDiscountAmount: Joi.number().min(0).optional().default(0),
   startDate: Joi.date().optional(),
   expiryDate: Joi.date().required().messages({
     'any.required': 'Expiry date is required'
@@ -32,8 +30,6 @@ const updateCouponSchema = Joi.object({
   code: Joi.string().trim().uppercase().optional(),
   discountType: Joi.string().valid('percentage', 'flat').optional(),
   discountValue: Joi.number().positive().optional(),
-  minOrderValue: Joi.number().min(0).optional(),
-  maxDiscountAmount: Joi.number().min(0).optional(),
   startDate: Joi.date().optional(),
   expiryDate: Joi.date().optional(),
   usageLimit: Joi.number().integer().min(1).optional().allow(null),

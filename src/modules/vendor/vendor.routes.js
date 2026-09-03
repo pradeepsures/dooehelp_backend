@@ -11,5 +11,6 @@ router.use(protect, restrictTo('vendor'));
 router.use('/category', require('./category/category.routes'));
 router.use('/bookings', require('./booking/vendor-booking.routes'));
 router.use('/localities', require('./locality/locality.routes'));
+router.use('/wallet', require('./wallet/vendor-wallet.routes'));
 
 module.exports = router;

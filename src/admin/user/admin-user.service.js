@@ -75,6 +75,85 @@ class AdminUserService extends BaseService {
       bookings
     };
   }
+
+  async adjustWalletBalance(userId, { amount, type, description }, adminId) {
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0) {
+      throw new AppError('Amount must be a positive number greater than 0', 400, 'BAD_REQUEST');
+    }
+
+    if (type !== 'credit' && type !== 'debit') {
+      throw new AppError('Transaction type must be either credit or debit', 400, 'BAD_REQUEST');
+    }
+
+    const User = require('../../models/User.model');
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404, 'NOT_FOUND');
+    }
+
+    const previousBalance = Number(user.walletBalance) || 0;
+    if (type === 'debit' && previousBalance < numAmount) {
+      throw new AppError(`Cannot debit ₹${numAmount}. User's current balance is only ₹${previousBalance}`, 400, 'INSUFFICIENT_BALANCE');
+    }
+
+    const currentBalance = type === 'credit'
+      ? Math.round((previousBalance + numAmount) * 100) / 100
+      : Math.round((previousBalance - numAmount) * 100) / 100;
+
+    const UserWalletHistory = require('../../models/UserWalletHistory.model');
+    const transaction = await UserWalletHistory.create({
+      userId: user._id,
+      transactionType: type,
+      amount: numAmount,
+      previousBalance,
+      currentBalance,
+      description: description || `Manual ${type} by admin`,
+      performedBy: adminId || null,
+      date: new Date()
+    });
+
+    user.walletBalance = currentBalance;
+    await user.save();
+
+    return {
+      user: {
+        _id: user._id,
+        name: user.name,
+        phoneNumber: user.phoneNumber,
+        walletBalance: user.walletBalance
+      },
+      transaction
+    };
+  }
+
+  async getWalletHistory(userId, query = {}) {
+    const page = parseInt(query.page) || 1;
+    const limit = parseInt(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const UserWalletHistory = require('../../models/UserWalletHistory.model');
+    const filter = { userId };
+
+    const [total, transactions] = await Promise.all([
+      UserWalletHistory.countDocuments(filter),
+      UserWalletHistory.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    return {
+      transactions,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+        totalItems: total
+      }
+    };
+  }
 }
 
 module.exports = new AdminUserService();

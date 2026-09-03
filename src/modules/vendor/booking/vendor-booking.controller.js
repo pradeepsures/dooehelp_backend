@@ -466,5 +466,27 @@ exports.verifyEndOtp = catchAsync(async (req, res) => {
 
   await booking.save();
 
-  sendSuccess(res, { bookingId: booking.bookingId, bookingStatus: 'completed' }, 'Completion OTP verified successfully. Service completed.');
+  // Automatically credit vendor wallet, deduct dynamic platform fee, and record history
+  let walletTransaction = null;
+  try {
+    const vendorWalletService = require('../wallet/vendor-wallet.service');
+    walletTransaction = await vendorWalletService.recordBookingCompletionEarnings(vendorId, booking);
+  } catch (err) {
+    console.error('Failed to credit vendor wallet on completion:', err);
+  }
+
+  sendSuccess(res, {
+    bookingId: booking.bookingId,
+    bookingStatus: 'completed',
+    wallet: walletTransaction ? {
+      serviceTotal: walletTransaction.serviceTotal,
+      platformFeeRate: walletTransaction.platformFeeRate,
+      platformFeeAmount: walletTransaction.platformFeeAmount,
+      gstRate: walletTransaction.gstRate,
+      gstAmount: walletTransaction.gstAmount,
+      creditedAmount: walletTransaction.amount,
+      previousBalance: walletTransaction.previousBalance,
+      currentBalance: walletTransaction.currentBalance
+    } : null
+  }, 'Completion OTP verified successfully. Service completed.');
 });
