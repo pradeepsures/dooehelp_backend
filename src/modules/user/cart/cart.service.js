@@ -25,7 +25,7 @@ class CartService extends BaseService {
       .populate({
         path: 'items.variantId',
         model: 'Variant',
-        select: 'name price originalPrice image description subCategoryId'
+        select: 'name price originalPrice image description subCategoryId duration'
       })
       .lean();
 
@@ -43,7 +43,10 @@ class CartService extends BaseService {
       }
     }
 
-    const taxAndFees = 0;
+    const PlatformFee = require('../../../models/PlatformFee.model');
+    const feeConfig = await PlatformFee.findOne({ status: 'active', isDeleted: false }).sort({ createdAt: -1 });
+    const gstRate = feeConfig && typeof feeConfig.gst === 'number' ? feeConfig.gst : 18;
+    const taxAndFees = Math.round((serviceTotal * gstRate) / 100);
     const deliveryFee = 0; // FREE
     const grandTotal = serviceTotal + taxAndFees + deliveryFee;
 
@@ -53,6 +56,7 @@ class CartService extends BaseService {
       items: validItems,
       billDetails: {
         serviceTotal,
+        gstRate,
         taxAndFees,
         deliveryFee,
         grandTotal

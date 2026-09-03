@@ -1,6 +1,8 @@
 const catchAsync = require('../../core/catchAsync');
 const Booking = require('../../models/Booking.model');
 const Vendor = require('../../models/Vendor.model');
+const Category = require('../../models/Category.model');
+const Locality = require('../../models/Locality.model');
 const AppError = require('../../core/AppError');
 const { sendSuccess } = require('../../core/response');
 
@@ -104,6 +106,25 @@ exports.assignPartner = catchAsync(async (req, res) => {
     throw new AppError('Booking payment is not paid', 400, 'BAD_REQUEST');
   }
 
+  // Verify vendor is not already busy with another active booking at this date & timeSlot
+  const bookingDate = new Date(booking.date);
+  const startOfDay = new Date(bookingDate);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(bookingDate);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const busyBooking = await Booking.findOne({
+    vendorId,
+    date: { $gte: startOfDay, $lte: endOfDay },
+    timeSlot: booking.timeSlot,
+    bookingStatus: { $in: ['assigned', 'accepted', 'scheduled', 'active'] },
+    _id: { $ne: booking._id }
+  });
+
+  if (busyBooking) {
+    throw new AppError('This partner is already assigned to another booking at this date and time slot', 400, 'BAD_REQUEST');
+  }
+
   // 3. Update booking
   booking.vendorId = vendorId;
   booking.bookingStatus = 'assigned';
@@ -199,7 +220,7 @@ exports.getAvailableVendorsForBooking = catchAsync(async (req, res) => {
     isDeleted: false,
     status: 'active',
     isVerified: true,
-    isProfileApproved: true,
+    isProfileApproved: { $ne: false },
     categories: { $in: categoryIds }
   };
 
@@ -220,10 +241,33 @@ exports.getAvailableVendorsForBooking = catchAsync(async (req, res) => {
       .map(loc => loc._id);
 
     if (matchedLocalityIds.length > 0) {
-      filter.localities = { $in: matchedLocalityIds };
+      filter.$or = [
+        { localities: { $in: matchedLocalityIds } },
+        { 'localities.0': { $in: matchedLocalityIds } }
+      ];
     } else {
       filter.localities = { $in: [] };
     }
+  }
+
+  // Exclude any vendors who already have an active booking at this date & timeSlot
+  const bookingDate = new Date(booking.date);
+  const startOfDay = new Date(bookingDate);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(bookingDate);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const busyVendorIds = await Booking.distinct('vendorId', {
+    date: { $gte: startOfDay, $lte: endOfDay },
+    timeSlot: booking.timeSlot,
+    bookingStatus: { $in: ['assigned', 'accepted', 'scheduled', 'active'] },
+    vendorId: { $ne: null },
+    _id: { $ne: booking._id }
+  });
+
+  const excludeIds = busyVendorIds.filter(Boolean);
+  if (excludeIds.length > 0) {
+    filter._id = { $nin: excludeIds };
   }
 
   const vendors = await Vendor.find(filter)

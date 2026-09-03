@@ -1,6 +1,9 @@
 const catchAsync = require('../../../core/catchAsync');
 const Booking = require('../../../models/Booking.model');
 const UserAddress = require('../../../models/UserAddress.model');
+const User = require('../../../models/User.model');
+const Category = require('../../../models/Category.model');
+const Subcategory = require('../../../models/Subcategory.model');
 const AppError = require('../../../core/AppError');
 const { sendSuccess } = require('../../../core/response');
 
@@ -19,19 +22,30 @@ exports.listVendorBookings = catchAsync(async (req, res) => {
     // Upcoming: bookings assigned to the vendor but pending acceptance
     filter.bookingStatus = 'assigned';
   } else if (type === 'future') {
-    // Future: accepted or active bookings scheduled for dates after today
+    // Future: scheduled bookings for dates after today
     filter.date = { $gt: endOfToday };
-    filter.bookingStatus = { $in: ['accepted', 'active'] };
+    filter.bookingStatus = { $in: ['assigned', 'accepted', 'active'] };
+  } else if (type === 'today') {
+    // Today: today's assigned, accepted or active bookings
+    filter.date = { $gte: startOfToday, $lte: endOfToday };
+    filter.bookingStatus = { $in: ['assigned', 'accepted', 'active'] };
   } else if (type === 'completed') {
     // Completed: only completed bookings
     filter.bookingStatus = 'completed';
   } else if (type === 'history') {
-    // History: completed or cancelled bookings
-    filter.bookingStatus = { $in: ['completed', 'cancelled'] };
+    // History: completed, cancelled or declined bookings
+    filter.bookingStatus = { $in: ['completed', 'cancelled', 'declined'] };
   } else {
-    // Default (today): today's accepted or active bookings
-    filter.date = { $gte: startOfToday, $lte: endOfToday };
-    filter.bookingStatus = { $in: ['accepted', 'active'] };
+    // Default (when no type parameter is passed):
+    // Always include assigned bookings (which need immediate accept/decline action)
+    // PLUS today's accepted or active bookings
+    filter.$or = [
+      { bookingStatus: 'assigned' },
+      {
+        bookingStatus: { $in: ['accepted', 'active'] },
+        date: { $gte: startOfToday, $lte: endOfToday }
+      }
+    ];
   }
 
   const bookings = await Booking.find(filter)

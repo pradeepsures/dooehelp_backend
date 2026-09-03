@@ -10,18 +10,146 @@ class BookingService extends BaseService {
     super(bookingRepository, 'booking');
   }
 
-  async getAvailableSlots(userId, categoryId) {
-    this.logger.info({ userId, categoryId }, 'getAvailableSlots');
+  async getAvailableSlots(userId, options = {}) {
+    this.logger.info({ userId, options }, 'getAvailableSlots');
 
-    const defaultSlots = {
-      morning: ["08:00 AM", "09:30 AM", "11:00 AM"],
-      afternoon: ["01:00 PM", "02:30 PM", "04:00 PM"],
-      evening: ["05:30 PM", "07:00 PM"]
-    };
+    const Variant = require('../../../models/Variant.model');
+    const Subcategory = require('../../../models/Subcategory.model');
+    const Vendor = require('../../../models/Vendor.model');
+    const Booking = require('../../../models/Booking.model');
 
+    let categoryId = options.categoryId;
+    let variantId = options.variantId;
+    let subcategoryId = options.subcategoryId;
+    let duration = options.duration;
+    let all = options.all;
+    let filterUnavailable = options.filterUnavailable;
+
+    let resolvedDuration = duration ? parseInt(duration, 10) : null;
+    let resolvedCategoryId = categoryId || null;
+
+    // 1. If variantId is provided, fetch variant to get duration and subcategory/category
+    if (variantId) {
+      const variant = await Variant.findById(variantId).populate('subCategoryId');
+      if (variant) {
+        if (!resolvedDuration && variant.duration) {
+          resolvedDuration = variant.duration;
+        }
+        if (!resolvedCategoryId && variant.subCategoryId?.categoryId) {
+          resolvedCategoryId = variant.subCategoryId.categoryId.toString();
+        }
+      }
+    } else if (subcategoryId) {
+      const variant = await Variant.findOne({ subCategoryId: subcategoryId, status: true, isDeleted: false });
+      if (variant && !resolvedDuration && variant.duration) {
+        resolvedDuration = variant.duration;
+      }
+      if (!resolvedCategoryId) {
+        const subcat = await Subcategory.findById(subcategoryId);
+        if (subcat?.categoryId) {
+          resolvedCategoryId = subcat.categoryId.toString();
+        }
+      }
+    } else if (!resolvedDuration || !resolvedCategoryId) {
+      // Look up user's active cart to retrieve selected variant and category
+      try {
+        const cart = await cartService.getCart(userId);
+        if (cart && cart.items && cart.items.length > 0) {
+          for (const item of cart.items) {
+            const v = item.variantId;
+            const s = item.subcategoryId;
+            if (v && v.duration && !resolvedDuration) {
+              resolvedDuration = v.duration;
+            }
+            if (s && s.categoryId && !resolvedCategoryId) {
+              resolvedCategoryId = (s.categoryId._id || s.categoryId).toString();
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.warn({ err: err.message }, 'Failed to read cart for slot details');
+      }
+    }
+
+    // Default duration to 30 minutes if not specified or invalid
+    if (!resolvedDuration || isNaN(resolvedDuration) || resolvedDuration <= 0) {
+      resolvedDuration = 30;
+    }
+
+    // 2. Fetch eligible partners for the resolved category
+    let totalEligiblePartners = 0;
+    let eligiblePartnerIds = [];
+
+    if (resolvedCategoryId) {
+      const eligiblePartners = await Vendor.find({
+        categories: { $in: [resolvedCategoryId] },
+        status: 'active',
+        isDeleted: false,
+        isVerified: true,
+        isProfileApproved: { $ne: false }
+      }).select('_id').lean();
+
+      totalEligiblePartners = eligiblePartners.length;
+      eligiblePartnerIds = eligiblePartners.map(p => p._id);
+    }
+
+    // 3. Prepare date range for the next 7 days
     const days = [];
     const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+    const now = new Date();
+    const formatLocalDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const startOfRange = new Date();
+    startOfRange.setHours(0, 0, 0, 0);
+    const endOfRange = new Date();
+    endOfRange.setDate(endOfRange.getDate() + 7);
+    endOfRange.setHours(23, 59, 59, 999);
+
+    // 4. Fetch active bookings in the 7-day range for eligible partners
+    const busyPartnersMap = new Map();
+    if (eligiblePartnerIds.length > 0) {
+      const activeBookings = await Booking.find({
+        vendorId: { $in: eligiblePartnerIds },
+        date: { $gte: startOfRange, $lte: endOfRange },
+        bookingStatus: { $in: ['assigned', 'accepted', 'scheduled', 'active'] }
+      }).select('vendorId date timeSlot').lean();
+
+      for (const b of activeBookings) {
+        if (!b.date || !b.timeSlot) continue;
+        const bDate = new Date(b.date);
+        const dStr = formatLocalDate(bDate);
+        const key = `${dStr}_${b.timeSlot.trim().toUpperCase()}`;
+        if (!busyPartnersMap.has(key)) {
+          busyPartnersMap.set(key, new Set());
+        }
+        busyPartnersMap.get(key).add(b.vendorId.toString());
+      }
+    }
+
+    const formatMinutesTo12Hour = (minutes) => {
+      const hours24 = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+      return `${String(hours12).padStart(2, '0')}:${String(mins).padStart(2, '0')} ${period}`;
+    };
+
+    const getSlotType = (minutes) => {
+      if (minutes < 720) return 'morning'; // 8:00 AM - 11:59 AM
+      if (minutes < 1020) return 'afternoon'; // 12:00 PM - 4:59 PM (17:00 = 1020)
+      return 'evening'; // 5:00 PM - 8:00 PM
+    };
+
+    const showAll = all === 'true' || all === true;
+    const shouldFilterUnavailable = !showAll && filterUnavailable !== 'false' && filterUnavailable !== false;
+
+    // 5. Generate slots for next 7 days (8:00 AM to 8:00 PM)
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() + i);
@@ -29,12 +157,7 @@ class BookingService extends BaseService {
       const dayOfMonth = date.getDate();
       const dayName = weekdays[date.getDay()];
       const isToday = i === 0;
-
-      // Construct date string in local time to avoid UTC day shifts
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      const dateStr = formatLocalDate(date);
 
       const dailySlots = {
         morning: [],
@@ -42,11 +165,46 @@ class BookingService extends BaseService {
         evening: []
       };
 
-      for (const slotType of Object.keys(defaultSlots)) {
-        for (const timeStr of defaultSlots[slotType]) {
+      // 8:00 AM to 8:00 PM
+      const startMinutes = 8 * 60; // 480
+      const endMinutes = 20 * 60; // 1200
+
+      for (let curMin = startMinutes; curMin + resolvedDuration <= endMinutes; curMin += resolvedDuration) {
+        const timeStr = formatMinutesTo12Hour(curMin);
+        const slotType = getSlotType(curMin);
+
+        // Check if the slot is in the past for today
+        let isPast = false;
+        if (isToday) {
+          const slotDateTime = new Date(date);
+          const hours24 = Math.floor(curMin / 60);
+          const mins = curMin % 60;
+          slotDateTime.setHours(hours24, mins, 0, 0);
+          if (slotDateTime <= now) {
+            isPast = true;
+          }
+        }
+
+        // Check partner availability
+        let isPartnerAvailable = true;
+        if (resolvedCategoryId) {
+          if (totalEligiblePartners === 0) {
+            isPartnerAvailable = false;
+          } else {
+            const key = `${dateStr}_${timeStr.trim().toUpperCase()}`;
+            const busyCount = busyPartnersMap.get(key)?.size || 0;
+            if (busyCount >= totalEligiblePartners) {
+              isPartnerAvailable = false;
+            }
+          }
+        }
+
+        const isAvailable = !isPast && isPartnerAvailable;
+
+        if (isAvailable || !shouldFilterUnavailable) {
           dailySlots[slotType].push({
             time: timeStr,
-            isAvailable: true
+            isAvailable
           });
         }
       }
@@ -56,6 +214,7 @@ class BookingService extends BaseService {
         dayName: isToday ? `${dayName} Today` : dayName,
         dayOfMonth,
         isToday,
+        variantDuration: resolvedDuration,
         slots: dailySlots
       });
     }
@@ -166,10 +325,45 @@ class BookingService extends BaseService {
       });
     }
 
-    // 4. Calculate Tax (e.g., 5%) and Delivery (0)
-    const taxAndFees = Math.round(serviceTotal * 0.05);
+    // 4. Calculate dynamic GST tax from PlatformFee model and Delivery (0)
+    const PlatformFee = require('../../../models/PlatformFee.model');
+    const feeConfig = await PlatformFee.findOne({ status: 'active', isDeleted: false }).sort({ createdAt: -1 });
+    const gstRate = feeConfig && typeof feeConfig.gst === 'number' ? feeConfig.gst : 18;
+    const taxAndFees = Math.round((serviceTotal * gstRate) / 100);
     const deliveryFee = 0; // FREE
     const grandTotal = serviceTotal + taxAndFees + deliveryFee;
+
+    // 5. Verify slot partner availability
+    const Vendor = require('../../../models/Vendor.model');
+    const categoryIds = [...new Set(bookingItems.map(item => item.categoryId?.toString()).filter(Boolean))];
+    if (categoryIds.length > 0) {
+      const eligiblePartners = await Vendor.find({
+        categories: { $in: categoryIds },
+        status: 'active',
+        isDeleted: false,
+        isVerified: true,
+        isProfileApproved: { $ne: false }
+      }).select('_id').lean();
+
+      if (eligiblePartners.length > 0) {
+        const bookingDate = new Date(date);
+        const startOfDay = new Date(bookingDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(bookingDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        const busyPartnerIds = await this.repository.model.distinct('vendorId', {
+          vendorId: { $in: eligiblePartners.map(p => p._id) },
+          date: { $gte: startOfDay, $lte: endOfDay },
+          timeSlot: timeSlot,
+          bookingStatus: { $in: ['assigned', 'accepted', 'scheduled', 'active'] }
+        });
+
+        if (busyPartnerIds.length >= eligiblePartners.length) {
+          throw new AppError('The selected time slot is no longer available. Please select another slot.', 400, 'SLOT_UNAVAILABLE');
+        }
+      }
+    }
 
     // 5. Use resolved booking location coordinates
     const location = bookingLocation;
