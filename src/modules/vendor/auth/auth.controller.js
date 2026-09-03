@@ -9,8 +9,8 @@ exports.sendOtp = catchAsync(async (req, res) => {
 });
 
 exports.verifyOtp = catchAsync(async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-  const result = await authService.verifyOtp(phoneNumber, otp);
+  const { phoneNumber, otp, fcmToken, deviceId } = req.body;
+  const result = await authService.verifyOtp(phoneNumber, otp, { fcmToken, deviceId });
   
   const responseData = {
     isNewUser: result.isNewUser,
@@ -41,7 +41,7 @@ exports.getProfile = catchAsync(async (req, res) => {
 });
 
 exports.updateProfile = catchAsync(async (req, res) => {
-  const { name, email, gender, yearOfExperience, categories, localities, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName } = req.body;
+  const { name, email, gender, yearOfExperience, categories, localities, skills, tools, onlineStatus, city, address, lat, long, adharNumber, panNumber, bankAccuntno, ifscCode, accountHolderName, bankName, fcmToken, deviceId } = req.body;
   const updateData = {};
 
   if (name !== undefined) updateData.name = name;
@@ -57,6 +57,8 @@ exports.updateProfile = catchAsync(async (req, res) => {
   if (ifscCode !== undefined) updateData.ifscCode = ifscCode;
   if (accountHolderName !== undefined) updateData.accountHolderName = accountHolderName;
   if (bankName !== undefined) updateData.bankName = bankName;
+  if (fcmToken !== undefined) updateData.fcmToken = fcmToken;
+  if (deviceId !== undefined) updateData.deviceId = deviceId;
 
   if (lat !== undefined || long !== undefined) {
     updateData.location = updateData.location || {};

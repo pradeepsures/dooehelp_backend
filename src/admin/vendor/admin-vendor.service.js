@@ -40,22 +40,54 @@ class AdminVendorService extends BaseService {
     const vendor = await this.repository.findOne({ _id: id, isDeleted: false });
     if (!vendor) throw new AppError('Vendor not found', 404, 'NOT_FOUND');
 
-    return this.repository.updateById(id, {
+    const updatedVendor = await this.repository.updateById(id, {
       isVerified: true,
       status: 'active',
       isProfileApproved: true
     });
+
+    // Notify vendor that profile has been approved
+    try {
+      const notificationService = require('../../services/notification.service');
+      notificationService.sendToVendor(id, {
+        title: 'Profile Approved! ✅',
+        body: 'Congratulations! Your partner account has been verified and approved by admin. You can now receive and accept customer bookings.',
+        data: {
+          type: 'VENDOR_APPROVED'
+        }
+      }).catch(err => console.error('Vendor approval notification error:', err.message));
+    } catch (err) {
+      console.error('Failed to trigger vendor approval notification:', err.message);
+    }
+
+    return updatedVendor;
   }
 
   async rejectVendor(id) {
     const vendor = await this.repository.findOne({ _id: id, isDeleted: false });
     if (!vendor) throw new AppError('Vendor not found', 404, 'NOT_FOUND');
 
-    return this.repository.updateById(id, {
+    const updatedVendor = await this.repository.updateById(id, {
       isVerified: false,
       status: 'inactive',
       isProfileApproved: false
     });
+
+    // Notify vendor that profile application was rejected or revoked
+    try {
+      const notificationService = require('../../services/notification.service');
+      notificationService.sendToVendor(id, {
+        title: 'Profile Application Status Update ⚠️',
+        body: 'Your partner application has been rejected or deactivated by admin. Please contact support for more details.',
+        data: {
+          type: 'VENDOR_REJECTED'
+        }
+      }).catch(err => console.error('Vendor rejection notification error:', err.message));
+    } catch (err) {
+      console.error('Failed to trigger vendor rejection notification:', err.message);
+    }
+
+    return updatedVendor;
   }
 
   async adjustWalletBalance(vendorId, { amount, type, description }, adminId) {
@@ -101,6 +133,28 @@ class AdminVendorService extends BaseService {
 
     vendor.walletBalance = currentBalance;
     await vendor.save();
+
+    // Notify vendor about wallet update
+    try {
+      const notificationService = require('../../services/notification.service');
+      const title = type === 'credit' ? 'Wallet Credited! 💰' : 'Wallet Debited! 💳';
+      const body = type === 'credit'
+        ? `₹${numAmount} has been credited to your DoorHelp partner wallet. Current balance: ₹${currentBalance}.`
+        : `₹${numAmount} has been debited from your DoorHelp partner wallet. Current balance: ₹${currentBalance}.`;
+
+      notificationService.sendToVendor(vendor._id, {
+        title,
+        body,
+        data: {
+          transactionType: type,
+          amount: String(numAmount),
+          currentBalance: String(currentBalance),
+          type: 'WALLET_UPDATE'
+        }
+      }).catch(err => console.error('Vendor wallet notification error:', err.message));
+    } catch (err) {
+      console.error('Failed to trigger vendor wallet notification:', err.message);
+    }
 
     return {
       vendor: {

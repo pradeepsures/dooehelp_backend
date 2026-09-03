@@ -396,6 +396,30 @@ class BookingService extends BaseService {
     await cartService.clearCart(userId);
 
     this.logger.info({ bookingId: newBooking.bookingId }, 'Booking created successfully');
+
+    // 9. Send push notification to user
+    try {
+      const firstItemName = bookingItems[0]?.name || 'Service';
+      const otherItemsCount = bookingItems.length > 1 ? ` +${bookingItems.length - 1} more` : '';
+      const serviceSummary = `${firstItemName}${otherItemsCount}`;
+
+      const notificationService = require('../../../services/notification.service');
+      notificationService.sendToUser(userId, {
+        title: 'Booking Confirmed! 🎉',
+        body: `Booking #${newBooking.bookingId} (${serviceSummary}) has been created successfully. Total: ₹${newBooking.grandTotal}`,
+        data: {
+          bookingId: String(newBooking._id),
+          customBookingId: String(newBooking.bookingId),
+          grandTotal: String(newBooking.grandTotal),
+          type: 'BOOKING_CREATED'
+        }
+      }).catch(err => {
+        this.logger.warn({ err: err.message }, 'Non-blocking notification delivery issue');
+      });
+    } catch (notifErr) {
+      this.logger.warn({ err: notifErr.message }, 'Failed to trigger booking push notification');
+    }
+
     return newBooking;
   }
 

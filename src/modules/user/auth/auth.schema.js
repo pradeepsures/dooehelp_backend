@@ -28,7 +28,9 @@ const verifyOtpSchema = Joi.object({
   otp: Joi.string().trim().required().messages({
     'string.empty': 'OTP is required',
     'any.required': 'OTP is required'
-  })
+  }),
+  fcmToken: Joi.string().trim().optional().allow('', null),
+  deviceId: Joi.string().trim().optional().allow('', null)
 });
 
 const updateProfileSchema = Joi.object({
@@ -36,7 +38,9 @@ const updateProfileSchema = Joi.object({
   email: Joi.string().email().trim().optional(),
   lat: Joi.number().optional(),
   long: Joi.number().optional(),
-  address: Joi.string().trim().optional()
+  address: Joi.string().trim().optional(),
+  fcmToken: Joi.string().trim().optional().allow('', null),
+  deviceId: Joi.string().trim().optional().allow('', null)
 });
 
 module.exports = {

@@ -33,8 +33,8 @@ exports.sendOtp = catchAsync(async (req, res) => {
 });
 
 exports.verifyOtp = catchAsync(async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-  const result = await authService.verifyOtp(phoneNumber, otp);
+  const { phoneNumber, otp, fcmToken, deviceId } = req.body;
+  const result = await authService.verifyOtp(phoneNumber, otp, { fcmToken, deviceId });
   sendSuccess(res, result, 'Login successful');
 });
 
@@ -64,6 +64,8 @@ exports.updateProfile = catchAsync(async (req, res) => {
   if (name !== undefined) updateData.name = name;
   if (email !== undefined) updateData.email = email;
   if (address !== undefined) updateData.address = address;
+  if (req.body.fcmToken !== undefined) updateData.fcmToken = req.body.fcmToken;
+  if (req.body.deviceId !== undefined) updateData.deviceId = req.body.deviceId;
 
   if (req.file) {
     updateData.profileImage = `/${req.file.destination}/${req.file.filename}`.replace(/\\/g, '/');

@@ -145,6 +145,43 @@ exports.assignPartner = catchAsync(async (req, res) => {
     })
     .lean();
 
+  // Send push notification to user that partner is assigned
+  try {
+    const notificationService = require('../../services/notification.service');
+    const bId = booking.bookingId || booking._id;
+    const partnerName = vendor.name || 'Service Partner';
+    const partnerPhone = vendor.phoneNumber ? ` (${vendor.phoneNumber})` : '';
+
+    notificationService.sendToUser(booking.userId, {
+      title: 'Partner Assigned! 🛠️',
+      body: `Partner ${partnerName}${partnerPhone} has been assigned to your booking #${bId}.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        partnerName: String(vendor.name || ''),
+        partnerPhone: String(vendor.phoneNumber || ''),
+        type: 'BOOKING_ASSIGNED'
+      }
+    }).catch(err => console.error('Notification error:', err.message));
+
+    // Send push notification to vendor that booking is assigned
+    const bookingDateStr = booking.date ? new Date(booking.date).toLocaleDateString('en-IN') : '';
+    const slotStr = booking.timeSlot ? ` (${booking.timeSlot})` : '';
+    notificationService.sendToVendor(vendor._id, {
+      title: 'New Booking Assigned! 🛠️',
+      body: `You have been assigned to booking #${bId} on ${bookingDateStr}${slotStr}. Please accept or decline.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        date: String(bookingDateStr),
+        timeSlot: String(booking.timeSlot || ''),
+        type: 'BOOKING_ASSIGNED'
+      }
+    }).catch(err => console.error('Vendor notification error:', err.message));
+  } catch (err) {
+    console.error('Failed to trigger assign notification:', err.message);
+  }
+
   sendSuccess(res, updatedBooking, `Booking successfully assigned to vendor ${vendor.name || vendorId}`);
 });
 

@@ -39,6 +39,15 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  fcmToken: {
+    type: String,
+    default: null,
+    index: true
+  },
+  deviceId: {
+    type: String,
+    default: null
+  },
   status: {
     type: Boolean,
     default: true

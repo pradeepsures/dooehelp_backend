@@ -42,7 +42,7 @@ class VendorAuthService extends BaseService {
     return { message: 'OTP sent successfully to vendor' };
   }
 
-  async verifyOtp(phoneNumber, otp) {
+  async verifyOtp(phoneNumber, otp, deviceData = {}) {
     this.logger.info({ phoneNumber }, 'verifyOtp vendor initiated');
 
     const vendor = await this.repository.findByPhone(phoneNumber);
@@ -64,11 +64,36 @@ class VendorAuthService extends BaseService {
     const isNewUser = vendor.profileCompletion === 100 ? false : vendor.isNewUser;
     const isCompleteProfile = vendor.profileCompletion === 100 ? true : vendor.isCompleteProfile;
 
-    const updatedVendor = await this.repository.updateById(vendor._id, {
+    const updatePayload = {
       $unset: { otp: 1, otpExpiresAt: 1 },
       isNewUser: false,
       isCompleteProfile
-    });
+    };
+
+    if (deviceData.fcmToken !== undefined && deviceData.fcmToken !== '') {
+      updatePayload.fcmToken = deviceData.fcmToken;
+    }
+    if (deviceData.deviceId !== undefined && deviceData.deviceId !== '') {
+      updatePayload.deviceId = deviceData.deviceId;
+    }
+
+    const updatedVendor = await this.repository.updateById(vendor._id, updatePayload);
+
+    // If first time / new vendor account, send welcome notification
+    if (vendor.isNewUser) {
+      try {
+        const notificationService = require('../../../services/notification.service');
+        notificationService.sendToVendor(vendor._id, {
+          title: 'Account Created Successfully! 🎉',
+          body: 'Welcome to DoorHelp Partner! Your account has been created successfully. Please complete your profile to get verified.',
+          data: {
+            type: 'ACCOUNT_CREATED'
+          }
+        }).catch(err => console.error('Welcome notification error:', err.message));
+      } catch (err) {
+        console.error('Failed to trigger welcome notification:', err.message);
+      }
+    }
 
     return {
       isNewUser,

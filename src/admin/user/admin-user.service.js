@@ -116,6 +116,28 @@ class AdminUserService extends BaseService {
     user.walletBalance = currentBalance;
     await user.save();
 
+    // Notify user about wallet update
+    try {
+      const notificationService = require('../../services/notification.service');
+      const title = type === 'credit' ? 'Wallet Credited! 💰' : 'Wallet Debited! 💳';
+      const body = type === 'credit'
+        ? `₹${numAmount} has been credited to your DoorHelp wallet. Current balance: ₹${currentBalance}.`
+        : `₹${numAmount} has been debited from your DoorHelp wallet. Current balance: ₹${currentBalance}.`;
+
+      notificationService.sendToUser(user._id, {
+        title,
+        body,
+        data: {
+          transactionType: type,
+          amount: String(numAmount),
+          currentBalance: String(currentBalance),
+          type: 'WALLET_UPDATE'
+        }
+      }).catch(err => console.error('Wallet notification error:', err.message));
+    } catch (err) {
+      console.error('Failed to trigger wallet notification:', err.message);
+    }
+
     return {
       user: {
         _id: user._id,

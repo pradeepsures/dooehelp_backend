@@ -109,6 +109,35 @@ exports.acceptBooking = catchAsync(async (req, res) => {
   booking.bookingStatus = 'accepted';
   await booking.save();
 
+  // Send push notification to vendor (and user) upon acceptance
+  try {
+    const notificationService = require('../../../services/notification.service');
+    const bId = booking.bookingId || booking._id;
+    const timeSlotStr = booking.timeSlot ? ` at ${booking.timeSlot}` : '';
+
+    notificationService.sendToVendor(vendorId, {
+      title: 'Booking Accepted! 👍',
+      body: `You have accepted booking #${bId}${timeSlotStr}. Please arrive on time.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        type: 'BOOKING_ACCEPTED'
+      }
+    }).catch(err => console.error('Vendor accept notification error:', err.message));
+
+    notificationService.sendToUser(booking.userId, {
+      title: 'Partner Accepted! 👍',
+      body: `Partner has accepted your booking #${bId} and will arrive as scheduled.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        type: 'BOOKING_ACCEPTED'
+      }
+    }).catch(err => console.error('User notification error:', err.message));
+  } catch (err) {
+    console.error('Failed to trigger accept notification:', err.message);
+  }
+
   // Populate user profile (including name, email, phone, location coordinates, address) to show on map
   const updatedBooking = await Booking.findById(booking._id)
     .populate({
@@ -156,6 +185,23 @@ exports.declineBooking = catchAsync(async (req, res) => {
   booking.bookingStatus = 'pending';
 
   await booking.save();
+
+  // Send push notification to vendor confirming decline
+  try {
+    const notificationService = require('../../../services/notification.service');
+    const bId = booking.bookingId || booking._id;
+    notificationService.sendToVendor(vendorId, {
+      title: 'Booking Declined ❌',
+      body: `You have declined booking #${bId}.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        type: 'BOOKING_DECLINED'
+      }
+    }).catch(err => console.error('Vendor decline notification error:', err.message));
+  } catch (err) {
+    console.error('Failed to trigger decline notification:', err.message);
+  }
 
   sendSuccess(res, null, 'Booking declined successfully. Re-routed back to pending bookings.');
 });
@@ -227,6 +273,23 @@ exports.verifyStartOtp = catchAsync(async (req, res) => {
   booking.bookingStatus = 'active';
 
   await booking.save();
+
+  // Notify user that service has started
+  try {
+    const notificationService = require('../../../services/notification.service');
+    const bId = booking.bookingId || booking._id;
+    notificationService.sendToUser(booking.userId, {
+      title: 'Service Started! 🚀',
+      body: `Your service for booking #${bId} has started.`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        type: 'SERVICE_STARTED'
+      }
+    }).catch(err => console.error('Notification error:', err.message));
+  } catch (err) {
+    console.error('Failed to trigger service start notification:', err.message);
+  }
 
   sendSuccess(res, { bookingId: booking.bookingId, isOtpVerified: true, bookingStatus: 'active' }, 'OTP verified successfully. Service started and booking status is now active.');
 });
@@ -473,6 +536,36 @@ exports.verifyEndOtp = catchAsync(async (req, res) => {
     walletTransaction = await vendorWalletService.recordBookingCompletionEarnings(vendorId, booking);
   } catch (err) {
     console.error('Failed to credit vendor wallet on completion:', err);
+  }
+
+  // Notify user that booking service is completed
+  try {
+    const notificationService = require('../../../services/notification.service');
+    const bId = booking.bookingId || booking._id;
+    notificationService.sendToUser(booking.userId, {
+      title: 'Service Completed! ✅',
+      body: `Your booking #${bId} has been completed successfully. Thank you for choosing DoorHelp!`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        type: 'SERVICE_COMPLETED'
+      }
+    }).catch(err => console.error('Notification error:', err.message));
+
+    // Notify vendor that booking is completed and earnings added to wallet
+    const creditedText = walletTransaction ? ` ₹${walletTransaction.amount} has been added to your wallet.` : '';
+    notificationService.sendToVendor(vendorId, {
+      title: 'Booking Completed! 🎉',
+      body: `Booking #${bId} has been completed successfully!${creditedText}`,
+      data: {
+        bookingId: String(booking._id),
+        customBookingId: String(bId),
+        creditedAmount: walletTransaction ? String(walletTransaction.amount) : '0',
+        type: 'BOOKING_COMPLETED'
+      }
+    }).catch(err => console.error('Vendor notification error:', err.message));
+  } catch (err) {
+    console.error('Failed to trigger service completed notification:', err.message);
   }
 
   sendSuccess(res, {

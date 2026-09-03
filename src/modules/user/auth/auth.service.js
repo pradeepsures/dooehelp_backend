@@ -81,7 +81,7 @@ class UserAuthService extends BaseService {
     return { message: 'OTP sent successfully' };
   }
 
-  async verifyOtp(phoneNumber, otp) {
+  async verifyOtp(phoneNumber, otp, deviceData = {}) {
     this.logger.info({ phoneNumber }, 'verifyOtp initiated');
 
     const user = await this.repository.findByPhone(phoneNumber);
@@ -100,10 +100,19 @@ class UserAuthService extends BaseService {
     // OTP is valid. Generate token.
     const { accessToken, refreshToken } = this.generateAuthTokens(user);
 
-    // Clear OTP
-    const updatedUser = await this.repository.updateById(user._id, {
+    // Clear OTP and update device tokens if provided
+    const updatePayload = {
       $unset: { otp: 1, otpExpiresAt: 1 }
-    });
+    };
+
+    if (deviceData.fcmToken !== undefined && deviceData.fcmToken !== '') {
+      updatePayload.fcmToken = deviceData.fcmToken;
+    }
+    if (deviceData.deviceId !== undefined && deviceData.deviceId !== '') {
+      updatePayload.deviceId = deviceData.deviceId;
+    }
+
+    const updatedUser = await this.repository.updateById(user._id, updatePayload);
 
     return { user: updatedUser, accessToken, refreshToken };
   }
