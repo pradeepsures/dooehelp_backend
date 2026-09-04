@@ -24,4 +24,28 @@ const remove = catchAsync(async (req, res) => {
   sendSuccess(res, null, 'Coupon deleted successfully');
 });
 
-module.exports = { list, getOne, create, update, remove };
+const assign = catchAsync(async (req, res) => {
+  const result = await adminCouponService.assignToUsers(req.params.id, req.body);
+  sendSuccess(res, result, `Coupon assigned to ${result.assignedCount} user(s) successfully`);
+});
+
+const unassign = catchAsync(async (req, res) => {
+  const result = await adminCouponService.unassignFromUsers(req.params.id, req.body);
+  sendSuccess(res, result, 'User(s) unassigned from coupon successfully');
+});
+
+const getAssignedUsers = catchAsync(async (req, res) => {
+  const result = await adminCouponService.getAssignedUsers(req.params.id, req.query);
+  sendPaginated(res, result.users, result.pagination, 'Assigned users retrieved successfully');
+});
+
+module.exports = {
+  list,
+  getOne,
+  create,
+  update,
+  remove,
+  assign,
+  unassign,
+  getAssignedUsers
+};

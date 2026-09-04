@@ -142,8 +142,92 @@ class SubcategoryService extends BaseService {
     };
   }
 
-  async getActiveVariantsBySubcategory(subCategoryId) {
-    this.logger.info({ subCategoryId }, 'getActiveVariantsBySubcategory');
+  /**
+   * Get all active variants with pagination, price range filters (minPrice, maxPrice), search, and sorting
+   */
+  async getAllActiveVariants(query = {}) {
+    this.logger.info({ query }, 'getAllActiveVariants');
+    const Variant = require('../../../models/Variant.model');
+
+    const filter = {
+      status: true,
+      isDeleted: false
+    };
+
+    if (query.subCategoryId) {
+      filter.subCategoryId = query.subCategoryId;
+    }
+
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filter.price = {};
+      if (query.minPrice !== undefined && query.minPrice !== '') {
+        const min = Number(query.minPrice);
+        if (!isNaN(min)) filter.price.$gte = min;
+      }
+      if (query.maxPrice !== undefined && query.maxPrice !== '') {
+        const max = Number(query.maxPrice);
+        if (!isNaN(max)) filter.price.$lte = max;
+      }
+      if (Object.keys(filter.price).length === 0) {
+        delete filter.price;
+      }
+    }
+
+    if (query.search) {
+      filter.$or = [
+        { name: { $regex: query.search, $options: 'i' } },
+        { description: { $regex: query.search, $options: 'i' } }
+      ];
+    }
+
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    let sort = { createdAt: -1 };
+    if (query.sortBy === 'price_asc' || query.sort === 'price_asc') {
+      sort = { price: 1 };
+    } else if (query.sortBy === 'price_desc' || query.sort === 'price_desc') {
+      sort = { price: -1 };
+    } else if (query.sortBy === 'name_asc') {
+      sort = { name: 1 };
+    }
+
+    const [total, variants] = await Promise.all([
+      Variant.countDocuments(filter),
+      Variant.find(filter)
+        .populate({
+          path: 'subCategoryId',
+          select: 'name image startingPrice categoryId status isDeleted'
+        })
+        .populate({
+          path: 'includedServices',
+          match: { status: true, isDeleted: false }
+        })
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    return {
+      variants,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
+    };
+  }
+
+  /**
+   * Get active variants for a specific subcategory with price range filter (minPrice, maxPrice) and pagination
+   */
+  async getActiveVariantsBySubcategory(subCategoryId, query = {}) {
+    this.logger.info({ subCategoryId, query }, 'getActiveVariantsBySubcategory');
     
     const subcategory = await subcategoryRepository.findById(subCategoryId);
     if (!subcategory || !subcategory.status || subcategory.isDeleted) {
@@ -151,11 +235,57 @@ class SubcategoryService extends BaseService {
     }
 
     const Variant = require('../../../models/Variant.model');
-    const variants = await Variant.find({
+    const filter = {
       subCategoryId,
       status: true,
       isDeleted: false
-    }).lean();
+    };
+
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filter.price = {};
+      if (query.minPrice !== undefined && query.minPrice !== '') {
+        const min = Number(query.minPrice);
+        if (!isNaN(min)) filter.price.$gte = min;
+      }
+      if (query.maxPrice !== undefined && query.maxPrice !== '') {
+        const max = Number(query.maxPrice);
+        if (!isNaN(max)) filter.price.$lte = max;
+      }
+      if (Object.keys(filter.price).length === 0) {
+        delete filter.price;
+      }
+    }
+
+    if (query.search) {
+      filter.$or = [
+        { name: { $regex: query.search, $options: 'i' } },
+        { description: { $regex: query.search, $options: 'i' } }
+      ];
+    }
+
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    let sort = { price: 1, createdAt: -1 };
+    if (query.sortBy === 'price_asc' || query.sort === 'price_asc') {
+      sort = { price: 1 };
+    } else if (query.sortBy === 'price_desc' || query.sort === 'price_desc') {
+      sort = { price: -1 };
+    }
+
+    const [total, variants] = await Promise.all([
+      Variant.countDocuments(filter),
+      Variant.find(filter)
+        .populate({
+          path: 'includedServices',
+          match: { status: true, isDeleted: false }
+        })
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
 
     const cleanVariants = variants.map(v => ({
       _id: v._id,
@@ -164,15 +294,28 @@ class SubcategoryService extends BaseService {
       originalPrice: v.originalPrice,
       duration: v.duration,
       image: v.image,
-      description: v.description
+      description: v.description,
+      userRequirements: v.userRequirements || [],
+      equipments: v.equipments || [],
+      includedServices: v.includedServices || []
     }));
 
     return {
       subcategory: {
         _id: subcategory._id,
-        name: subcategory.name
+        name: subcategory.name,
+        image: subcategory.image,
+        startingPrice: subcategory.startingPrice
       },
-      variants: cleanVariants
+      variants: cleanVariants,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
     };
   }
 

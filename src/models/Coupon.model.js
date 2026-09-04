@@ -45,6 +45,19 @@ const couponSchema = new mongoose.Schema(
       enum: ['active', 'inactive'],
       default: 'active',
     },
+    isForAllUsers: {
+      type: Boolean,
+      default: true,
+    },
+    assignedUsers: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+      ],
+      default: [],
+    },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -54,5 +67,7 @@ const couponSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+couponSchema.index({ assignedUsers: 1 });
 
 module.exports = mongoose.model('Coupon', couponSchema);

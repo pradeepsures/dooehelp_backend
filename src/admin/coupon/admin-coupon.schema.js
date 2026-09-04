@@ -34,10 +34,26 @@ const updateCouponSchema = Joi.object({
   expiryDate: Joi.date().optional(),
   usageLimit: Joi.number().integer().min(1).optional().allow(null),
   status: Joi.string().valid('active', 'inactive').optional(),
-  isDeleted: Joi.boolean().optional()
+  isDeleted: Joi.boolean().optional(),
+  isForAllUsers: Joi.boolean().optional(),
+  assignedUsers: Joi.array().items(Joi.string().hex().length(24)).optional()
 });
+
+const assignCouponSchema = Joi.object({
+  userIds: Joi.array().items(Joi.string().hex().length(24)).min(1).optional(),
+  userId: Joi.string().hex().length(24).optional(),
+  mode: Joi.string().valid('add', 'replace').default('add'),
+  sendNotification: Joi.boolean().default(true)
+}).or('userIds', 'userId');
+
+const unassignCouponSchema = Joi.object({
+  userIds: Joi.array().items(Joi.string().hex().length(24)).min(1).optional(),
+  userId: Joi.string().hex().length(24).optional()
+}).or('userIds', 'userId');
 
 module.exports = {
   createCouponSchema,
-  updateCouponSchema
+  updateCouponSchema,
+  assignCouponSchema,
+  unassignCouponSchema
 };
