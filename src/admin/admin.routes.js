@@ -27,5 +27,6 @@ router.use('/cms', require('./cms/admin-cms.routes'));
 router.use('/coupons', require('./coupon/admin-coupon.routes'));
 router.use('/platform-fees', require('./platform-fee/admin-platform-fee.routes'));
 router.use('/refer-earn', require('./refer-earn/admin-refer-earn.routes'));
+router.use('/notifications', require('./notification/admin-notification.routes'));
 
 module.exports = router;

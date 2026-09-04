@@ -1,5 +1,6 @@
 const BaseService = require('../../../core/BaseService');
 const userRepository = require('./user.repository');
+const userReferAndEarnService = require('../refer-earn/refer-earn.service');
 const AppError = require('../../../core/AppError');
 const jwt = require('jsonwebtoken');
 
@@ -39,11 +40,12 @@ class UserAuthService extends BaseService {
     }
 
     // 2. Validate referral code if provided
+    let referralValidation = null;
     if (userData.referredBy) {
-      const referrer = await this.repository.findOne({ referralCode: userData.referredBy });
-      if (!referrer) {
-        throw new AppError('Invalid referral code', 400, 'INVALID_REFERRAL');
-      }
+      referralValidation = await userReferAndEarnService.validateReferralCode(
+        userData.referredBy,
+        userData.phoneNumber
+      );
     }
 
     // 3. Generate OTP and save user
@@ -56,9 +58,27 @@ class UserAuthService extends BaseService {
     const newUser = await this.create(userData);
     this.logger.info({ userId: newUser._id }, 'New user registered');
 
+    // 4. Process referral reward if referral code was provided and validated
+    if (referralValidation && userData.referredBy) {
+      try {
+        await userReferAndEarnService.processReferralReward({
+          newUser,
+          referrerCode: userData.referredBy
+        });
+      } catch (err) {
+        this.logger.error({ err: err.message }, 'Failed to process referral reward during registration');
+      }
+    }
+
     console.log(`[MOCK SMS] OTP for ${newUser.phoneNumber} is: ${otp}`);
 
-    return { message: 'User registered and OTP sent successfully' };
+    // Re-fetch user to reflect any wallet updates from referral reward
+    const freshUser = await this.repository.findById(newUser._id);
+
+    return {
+      message: 'User registered and OTP sent successfully',
+      user: freshUser || newUser
+    };
   }
 
   async sendOtp(phoneNumber) {
@@ -112,9 +132,41 @@ class UserAuthService extends BaseService {
       updatePayload.deviceId = deviceData.deviceId;
     }
 
-    const updatedUser = await this.repository.updateById(user._id, updatePayload);
+    let updatedUser = await this.repository.updateById(user._id, updatePayload);
 
-    return { user: updatedUser, accessToken, refreshToken };
+    // Ensure user has a referral code
+    if (!updatedUser.referralCode) {
+      const User = require('../../../models/User.model');
+      const code = User.generateReferralCode
+        ? User.generateReferralCode(updatedUser.name)
+        : 'USER' + Math.floor(1000 + Math.random() * 9000);
+      await User.findByIdAndUpdate(updatedUser._id, { referralCode: code });
+      updatedUser.referralCode = code;
+    }
+
+    // If referredBy is passed during OTP verification and user hasn't claimed bonus yet
+    const referralCodeToUse = deviceData.referredBy || (!updatedUser.isReferralRewardClaimed ? updatedUser.referredBy : null);
+    if (referralCodeToUse && !updatedUser.isReferralRewardClaimed) {
+      try {
+        await userReferAndEarnService.processReferralReward({
+          newUser: updatedUser,
+          referrerCode: referralCodeToUse
+        });
+        updatedUser = await this.repository.findById(user._id);
+      } catch (err) {
+        this.logger.error({ err: err.message }, 'Referral processing error during verifyOtp');
+      }
+    }
+
+    return {
+      user: updatedUser,
+      accessToken,
+      refreshToken,
+      referralCode: updatedUser.referralCode,
+      isReferralRewardClaimed: updatedUser.isReferralRewardClaimed || false,
+      walletBalance: updatedUser.walletBalance || 0,
+      isNewUser: !updatedUser.name
+    };
   }
 
   async refreshToken(token) {

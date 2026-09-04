@@ -162,6 +162,7 @@ class SubcategoryService extends BaseService {
       name: v.name,
       price: v.price,
       originalPrice: v.originalPrice,
+      duration: v.duration,
       image: v.image,
       description: v.description
     }));

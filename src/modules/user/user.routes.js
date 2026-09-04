@@ -18,5 +18,7 @@ router.use('/wishlist', require('./wishlist/wishlist.routes'));
 router.use('/save-for-later', require('./save-for-later/save-for-later.routes'));
 router.use('/bookings', require('./booking/booking.routes'));
 router.use('/address', require('./address/address.routes'));
+router.use('/wallet', require('./wallet/user-wallet.routes'));
+router.use('/notifications', require('./notification/user-notification.routes'));
 
 module.exports = router;

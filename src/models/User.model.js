@@ -24,7 +24,25 @@ const userSchema = new mongoose.Schema({
     sparse: true
   },
   referredBy: {
-    type: String
+    type: String,
+    default: null
+  },
+  referredByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  isReferralRewardClaimed: {
+    type: Boolean,
+    default: false
+  },
+  referralCount: {
+    type: Number,
+    default: 0
+  },
+  totalReferralEarnings: {
+    type: Number,
+    default: 0
   },
   role: { 
     type: String, 
@@ -64,14 +82,27 @@ const userSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Helper to generate a unique referral code
+function generateReferralCode(name) {
+  const cleanName = (name || 'USER').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4);
+  const prefix = cleanName.padEnd(4, 'X');
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let randomPart = '';
+  for (let i = 0; i < 4; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${prefix}${randomPart}`;
+}
+
 // Pre-save hook to generate a referral code
 userSchema.pre('save', function () {
-  if (this.isNew && !this.referralCode) {
-    const namePrefix = this.name ? this.name.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '') : 'USER';
-    const randomNum = Math.floor(1000 + Math.random() * 9000); // 4 digit random number
-    this.referralCode = `${namePrefix}${randomNum}`;
+  if (!this.referralCode) {
+    this.referralCode = generateReferralCode(this.name);
   }
 });
 
 
-module.exports = mongoose.model('User', userSchema);
+const UserModel = mongoose.model('User', userSchema);
+UserModel.generateReferralCode = generateReferralCode;
+
+module.exports = UserModel;

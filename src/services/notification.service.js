@@ -56,21 +56,38 @@ class NotificationService {
   }
 
   /**
-   * Send push notification to a user by userId
+   * Send push notification to a user by userId and persist in database
    * @param {string|mongoose.Types.ObjectId} userId 
    * @param {object} payload { title, body, data }
    */
   async sendToUser(userId, { title, body, data = {} }) {
     try {
+      // 1. Persist notification in database
+      const Notification = require('../models/Notification.model');
+      let savedNotification = null;
+      try {
+        savedNotification = await Notification.create({
+          recipientType: 'user',
+          recipientTypeModel: 'User',
+          recipientId: userId,
+          title,
+          body,
+          data
+        });
+      } catch (dbErr) {
+        logger.error({ userId, err: dbErr.message }, 'Failed to save notification in DB');
+      }
+
+      // 2. Fetch user's FCM token
       const user = await User.findById(userId).select('_id name phoneNumber fcmToken').lean();
       if (!user) {
         logger.warn({ userId }, 'User not found for notification');
-        return { success: false, reason: 'USER_NOT_FOUND' };
+        return { success: false, reason: 'USER_NOT_FOUND', notificationId: savedNotification?._id };
       }
 
       if (!user.fcmToken) {
         logger.info({ userId, name: user.name }, 'User has no FCM token registered, skipping push notification');
-        return { success: false, reason: 'NO_FCM_TOKEN' };
+        return { success: true, savedInDb: true, reason: 'NO_FCM_TOKEN', notificationId: savedNotification?._id };
       }
 
       const result = await this.sendDirect(user.fcmToken, { title, body, data });
@@ -84,7 +101,7 @@ class NotificationService {
         await User.findByIdAndUpdate(userId, { fcmToken: null });
       }
 
-      return result;
+      return { ...result, notificationId: savedNotification?._id };
     } catch (error) {
       logger.error({ userId, err: error.message }, 'Error in sendToUser notification');
       return { success: false, error: error.message };
@@ -92,22 +109,39 @@ class NotificationService {
   }
 
   /**
-   * Send push notification to a vendor by vendorId
+   * Send push notification to a vendor by vendorId and persist in database
    * @param {string|mongoose.Types.ObjectId} vendorId 
    * @param {object} payload { title, body, data }
    */
   async sendToVendor(vendorId, { title, body, data = {} }) {
     try {
+      // 1. Persist notification in database
+      const Notification = require('../models/Notification.model');
+      let savedNotification = null;
+      try {
+        savedNotification = await Notification.create({
+          recipientType: 'vendor',
+          recipientTypeModel: 'Vendor',
+          recipientId: vendorId,
+          title,
+          body,
+          data
+        });
+      } catch (dbErr) {
+        logger.error({ vendorId, err: dbErr.message }, 'Failed to save vendor notification in DB');
+      }
+
+      // 2. Fetch vendor's FCM token
       const Vendor = require('../models/Vendor.model');
       const vendor = await Vendor.findById(vendorId).select('_id name phoneNumber fcmToken').lean();
       if (!vendor) {
         logger.warn({ vendorId }, 'Vendor not found for notification');
-        return { success: false, reason: 'VENDOR_NOT_FOUND' };
+        return { success: false, reason: 'VENDOR_NOT_FOUND', notificationId: savedNotification?._id };
       }
 
       if (!vendor.fcmToken) {
         logger.info({ vendorId, name: vendor.name }, 'Vendor has no FCM token registered, skipping push notification');
-        return { success: false, reason: 'NO_FCM_TOKEN' };
+        return { success: true, savedInDb: true, reason: 'NO_FCM_TOKEN', notificationId: savedNotification?._id };
       }
 
       const result = await this.sendDirect(vendor.fcmToken, { title, body, data });
@@ -121,7 +155,7 @@ class NotificationService {
         await Vendor.findByIdAndUpdate(vendorId, { fcmToken: null });
       }
 
-      return result;
+      return { ...result, notificationId: savedNotification?._id };
     } catch (error) {
       logger.error({ vendorId, err: error.message }, 'Error in sendToVendor notification');
       return { success: false, error: error.message };

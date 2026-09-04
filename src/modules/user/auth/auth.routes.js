@@ -4,7 +4,7 @@ const authController = require('./auth.controller');
 const uploadMiddleware = require('../../../middlewares/upload.middleware');
 
 const { validate } = require('../../../core/validate');
-const { registerSchema, sendOtpSchema, verifyOtpSchema, updateProfileSchema } = require('./auth.schema');
+const { registerSchema, sendOtpSchema, verifyOtpSchema, updateProfileSchema, applyReferralSchema } = require('./auth.schema');
 const { protect, restrictTo } = require('../../../middlewares/auth.middleware');
 
 router.post('/register', uploadMiddleware.single('profileImage'), validate(registerSchema), authController.register);
@@ -18,5 +18,6 @@ router.use(restrictTo('user'));
 
 router.get('/profile', authController.getProfile);
 router.put('/profile', uploadMiddleware.single('profileImage'), validate(updateProfileSchema), authController.updateProfile);
+router.post('/apply-referral', validate(applyReferralSchema), authController.applyReferral);
 
 module.exports = router;

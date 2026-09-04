@@ -42,6 +42,20 @@ const userWalletHistorySchema = new mongoose.Schema(
       ref: 'Booking',
       default: null
     },
+    source: {
+      type: String,
+      enum: ['manual', 'referral', 'booking', 'other'],
+      default: 'other'
+    },
+    referralUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    referralCode: {
+      type: String,
+      default: null
+    },
     date: {
       type: Date,
       default: Date.now

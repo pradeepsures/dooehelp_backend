@@ -30,7 +30,8 @@ const verifyOtpSchema = Joi.object({
     'any.required': 'OTP is required'
   }),
   fcmToken: Joi.string().trim().optional().allow('', null),
-  deviceId: Joi.string().trim().optional().allow('', null)
+  deviceId: Joi.string().trim().optional().allow('', null),
+  referredBy: Joi.string().trim().optional().allow('', null)
 });
 
 const updateProfileSchema = Joi.object({
@@ -43,9 +44,17 @@ const updateProfileSchema = Joi.object({
   deviceId: Joi.string().trim().optional().allow('', null)
 });
 
+const applyReferralSchema = Joi.object({
+  referralCode: Joi.string().trim().optional(),
+  code: Joi.string().trim().optional()
+}).or('referralCode', 'code').messages({
+  'object.missing': 'Referral code is required'
+});
+
 module.exports = {
   registerSchema,
   sendOtpSchema,
   verifyOtpSchema,
-  updateProfileSchema
+  updateProfileSchema,
+  applyReferralSchema
 };

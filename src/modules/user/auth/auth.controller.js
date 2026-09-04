@@ -33,8 +33,8 @@ exports.sendOtp = catchAsync(async (req, res) => {
 });
 
 exports.verifyOtp = catchAsync(async (req, res) => {
-  const { phoneNumber, otp, fcmToken, deviceId } = req.body;
-  const result = await authService.verifyOtp(phoneNumber, otp, { fcmToken, deviceId });
+  const { phoneNumber, otp, fcmToken, deviceId, referredBy } = req.body;
+  const result = await authService.verifyOtp(phoneNumber, otp, { fcmToken, deviceId, referredBy });
   sendSuccess(res, result, 'Login successful');
 });
 
@@ -46,7 +46,16 @@ exports.refreshToken = catchAsync(async (req, res) => {
 
 exports.getProfile = catchAsync(async (req, res) => {
   const userId = req.user._id;
-  const userDoc = await authService.getById(userId);
+  let userDoc = await authService.getById(userId);
+  if (!userDoc.referralCode) {
+    const User = require('../../../models/User.model');
+    const code = User.generateReferralCode
+      ? User.generateReferralCode(userDoc.name)
+      : 'USER' + Math.floor(1000 + Math.random() * 9000);
+    await User.findByIdAndUpdate(userId, { referralCode: code });
+    userDoc.referralCode = code;
+  }
+
   const user = userDoc.toObject ? userDoc.toObject() : userDoc;
   
   const UserAddress = require('../../../models/UserAddress.model');
@@ -73,4 +82,12 @@ exports.updateProfile = catchAsync(async (req, res) => {
 
   const updatedUser = await authService.update(userId, updateData);
   sendSuccess(res, updatedUser, 'Profile updated successfully');
+});
+
+exports.applyReferral = catchAsync(async (req, res) => {
+  const userId = req.user._id;
+  const userReferAndEarnService = require('../refer-earn/refer-earn.service');
+  const { referralCode, code } = req.body;
+  const result = await userReferAndEarnService.applyReferralCode(userId, referralCode || code);
+  sendSuccess(res, result, result.message);
 });

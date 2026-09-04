@@ -12,5 +12,6 @@ router.use('/category', require('./category/category.routes'));
 router.use('/bookings', require('./booking/vendor-booking.routes'));
 router.use('/localities', require('./locality/locality.routes'));
 router.use('/wallet', require('./wallet/vendor-wallet.routes'));
+router.use('/notifications', require('./notification/vendor-notification.routes'));
 
 module.exports = router;
